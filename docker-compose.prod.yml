@@ -15,7 +15,7 @@ services:
     build:
       context: .
       args:
-        VITE_PB_URL: /api
+        VITE_PB_URL: ""
     container_name: margin_frontend
     restart: unless-stopped
 
