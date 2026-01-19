@@ -28,6 +28,30 @@ This guide documents deploying Margin Tracker to Oracle Cloud Free Tier alongsid
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Quick Reference
+
+| Item | Value |
+|------|-------|
+| App URL | https://margintracker.my-oracle-n8n.kozow.com |
+| Admin URL | https://margintracker.my-oracle-n8n.kozow.com/_/ |
+| Server IP | 80.225.95.183 |
+| SSH User | ubuntu |
+| SSH Key | ~/.ssh/ssh-key-2025-06-23.key |
+| GitHub Repo | https://github.com/dracount/margin-tracker |
+| Network | my-automation-stack_default |
+| Backup Cron | Daily at 2:00 AM |
+
+## Credentials
+
+**App Login:**
+- Email: `davidsevel@gmail.com`
+- Password: `password`
+
+**PocketBase Admin Panel:**
+- URL: https://margintracker.my-oracle-n8n.kozow.com/_/
+- Email: `davidsevel@gmail.com`
+- Password: `password`
+
 ## File Locations
 
 | Location | Purpose |
@@ -37,6 +61,7 @@ This guide documents deploying Margin Tracker to Oracle Cloud Free Tier alongsid
 | `~/my-automation-stack/docker-compose.yml` | Main stack services |
 | `~/michael/margin-tracker/` | Margin Tracker app (separate compose file) |
 | `~/michael/margin-tracker/docker-compose.prod.yml` | Margin Tracker services |
+| `~/michael/margin-tracker/backups/` | Daily backup files |
 
 ## DNS Configuration
 
@@ -63,8 +88,6 @@ services:
   margin_frontend:
     build:
       context: .
-      args:
-        VITE_PB_URL: /api
     container_name: margin_frontend
     restart: unless-stopped
 
@@ -79,8 +102,8 @@ networks:
 
 **Key Points:**
 - Uses `my-automation-stack_default` network (external) to share with Caddy
-- Frontend builds with `VITE_PB_URL: /api` so API calls go through Caddy
-- PocketBase data persisted in named volume
+- Frontend auto-detects URL at runtime (uses `window.location.origin` in production)
+- PocketBase data persisted in named volume `margin-tracker_margin_pocketbase_data`
 
 ## Caddyfile Configuration
 
@@ -149,6 +172,11 @@ git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+**Or run remotely from WSL:**
+```bash
+ssh -i ~/.ssh/ssh-key-2025-06-23.key ubuntu@80.225.95.183 "cd ~/michael/margin-tracker && git pull && docker compose -f docker-compose.prod.yml up -d --build"
+```
+
 If Caddyfile changed:
 ```bash
 cp Caddyfile.prod ~/my-automation-stack/Caddyfile
@@ -168,13 +196,77 @@ ssh -i ~/.ssh/ssh-key-2025-06-23.key ubuntu@80.225.95.183
 ssh -i ~/.ssh/ssh-key-2025-06-23.key ubuntu@80.225.95.183 "command here"
 ```
 
+## Migrating Database from Local
+
+To copy the local PocketBase database to Oracle:
+
+```bash
+# 1. Export local database
+docker cp pb_margins:/pocketbase/data /tmp/pb_export
+tar -czf /tmp/pb_export.tar.gz -C /tmp pb_export
+
+# 2. Upload to Oracle
+scp -i ~/.ssh/ssh-key-2025-06-23.key /tmp/pb_export.tar.gz ubuntu@80.225.95.183:/tmp/
+
+# 3. On Oracle: Stop PocketBase, replace data, restart
+ssh -i ~/.ssh/ssh-key-2025-06-23.key ubuntu@80.225.95.183 "
+  docker stop margin_pocketbase
+  docker run --rm -v margin-tracker_margin_pocketbase_data:/pocketbase alpine sh -c 'rm -rf /pocketbase/data/*'
+  cd /tmp && tar -xzf pb_export.tar.gz
+  docker run --rm -v margin-tracker_margin_pocketbase_data:/pocketbase -v /tmp/pb_export:/import alpine sh -c 'cp -r /import/* /pocketbase/data/ && chmod -R 777 /pocketbase/data'
+  docker start margin_pocketbase
+"
+```
+
 ## Admin Access
 
 **PocketBase Admin UI:** https://margintracker.my-oracle-n8n.kozow.com/_/
 
-**Create/Update Admin:**
+**Create/Update Superuser (for admin panel):**
 ```bash
 docker exec margin_pocketbase /opt/pocketbase/pocketbase superuser upsert EMAIL PASSWORD --dir /pocketbase/data
+```
+
+**Update App User Password (via SQL):**
+```bash
+# Generate bcrypt hash locally
+python3 -c "import bcrypt; print(bcrypt.hashpw(b'NEW_PASSWORD', bcrypt.gensalt(10)).decode())"
+
+# Write hash to SQL file and upload, then:
+docker stop margin_pocketbase
+docker run --rm -v margin-tracker_margin_pocketbase_data:/pocketbase -v /tmp/update_pw.sql:/tmp/update_pw.sql alpine sh -c "apk add sqlite -q && sqlite3 /pocketbase/data/data.db < /tmp/update_pw.sql"
+docker start margin_pocketbase
+```
+
+## Backup
+
+### Automated Daily Backup
+
+A cron job runs daily at 2:00 AM:
+```
+0 2 * * * /home/ubuntu/michael/margin-tracker/scripts/backup.sh >> /home/ubuntu/michael/margin-tracker/backups/cron.log 2>&1
+```
+
+**Backup location:** `~/michael/margin-tracker/backups/`
+**Retention:** 7 days (older backups auto-deleted)
+
+### Manual Backup
+
+```bash
+# Run backup manually
+~/michael/margin-tracker/scripts/backup.sh
+
+# Or create a quick backup
+docker exec margin_pocketbase tar -czf /tmp/backup.tar.gz -C /pocketbase data
+docker cp margin_pocketbase:/tmp/backup.tar.gz ./pocketbase-backup.tar.gz
+```
+
+### Restore Backup
+
+```bash
+docker stop margin_pocketbase
+docker run --rm -v margin-tracker_margin_pocketbase_data:/pocketbase -v $(pwd)/pocketbase-backup.tar.gz:/tmp/backup.tar.gz alpine sh -c "rm -rf /pocketbase/data/* && tar -xzf /tmp/backup.tar.gz -C /pocketbase"
+docker start margin_pocketbase
 ```
 
 ## Useful Commands
@@ -199,6 +291,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 # Check network
 docker network inspect my-automation-stack_default | grep margin
+
+# Check volumes
+docker volume ls | grep margin
 ```
 
 ## Troubleshooting
@@ -227,28 +322,40 @@ Caddy handles SSL automatically. If issues occur:
 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
-## Backup
+### Login Works But Shows 0 Customers / Empty Data
+**Cause:** Browser has a stale auth token from a different PocketBase instance (e.g., localhost).
 
-**PocketBase Data:**
+**Solution:** Clear the token and re-login:
+```javascript
+// Run in browser console (F12 → Console)
+localStorage.removeItem('pocketbase_auth');
+location.reload();
+```
+Then log in again to get a fresh token from Oracle.
+
+### API Returns Empty Results But Database Has Data
+1. Check if user is authenticated: API requires `@request.auth.id != ""`
+2. Verify the auth token is from the correct PocketBase instance
+3. Test API with a fresh token:
 ```bash
-# Create backup
-docker exec margin_pocketbase tar -czf /tmp/backup.tar.gz -C /pocketbase data
-docker cp margin_pocketbase:/tmp/backup.tar.gz ./pocketbase-backup.tar.gz
-
-# Restore backup
-docker cp ./pocketbase-backup.tar.gz margin_pocketbase:/tmp/
-docker exec margin_pocketbase tar -xzf /tmp/backup.tar.gz -C /pocketbase
-docker restart margin_pocketbase
+TOKEN=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"identity":"EMAIL","password":"PASSWORD"}' \
+  'https://margintracker.my-oracle-n8n.kozow.com/api/collections/users/auth-with-password' \
+  | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+curl -s -H "Authorization: $TOKEN" 'https://margintracker.my-oracle-n8n.kozow.com/api/collections/customers/records'
 ```
 
-## Quick Reference
+### Frontend Connecting to Wrong PocketBase
+The frontend auto-detects the URL at runtime:
+- On `localhost` → connects to `http://127.0.0.1:8090`
+- On any other hostname → connects to `window.location.origin`
 
-| Item | Value |
-|------|-------|
-| App URL | https://margintracker.my-oracle-n8n.kozow.com |
-| Admin URL | https://margintracker.my-oracle-n8n.kozow.com/_/ |
-| Server IP | 80.225.95.183 |
-| SSH User | ubuntu |
-| SSH Key | ~/.ssh/ssh-key-2025-06-23.key |
-| GitHub Repo | https://github.com/dracount/margin-tracker |
-| Network | my-automation-stack_default |
+If issues persist, check `src/lib/pocketbase.ts`.
+
+### Database Permission Errors
+After migrating data, fix permissions:
+```bash
+docker stop margin_pocketbase
+docker run --rm -v margin-tracker_margin_pocketbase_data:/pocketbase alpine chmod -R 777 /pocketbase/data
+docker start margin_pocketbase
+```
