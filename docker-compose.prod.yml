@@ -10,8 +10,6 @@ services:
     restart: unless-stopped
     volumes:
       - margin_pocketbase_data:/pocketbase
-    networks:
-      - waha-net
 
   margin_frontend:
     build:
@@ -20,13 +18,11 @@ services:
         VITE_PB_URL: /api
     container_name: margin_frontend
     restart: unless-stopped
-    networks:
-      - waha-net
 
 volumes:
   margin_pocketbase_data:
 
 networks:
-  waha-net:
-    name: my-automation-stack_waha-net
+  default:
+    name: my-automation-stack_default
     external: true
