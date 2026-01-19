@@ -26,11 +26,13 @@ interface FieldErrors {
 interface DashboardRowProps {
     style: StyleRecord;
     onUpdate: (id: string, data: Partial<StyleRecord>) => Promise<boolean>;
+    onDelete: (id: string) => Promise<void>;
 }
 
-const DashboardRow: React.FC<DashboardRowProps> = ({ style, onUpdate }) => {
+const DashboardRow: React.FC<DashboardRowProps> = ({ style, onUpdate, onDelete }) => {
     const [localStyle, setLocalStyle] = useState(style);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+    const [isDeleting, setIsDeleting] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [errors, setErrors] = useState<FieldErrors>({});
     const [touchedFields, setTouchedFields] = useState<Set<keyof FieldErrors>>(new Set());
@@ -123,6 +125,16 @@ const DashboardRow: React.FC<DashboardRowProps> = ({ style, onUpdate }) => {
             ...prev,
             [field]: error || undefined
         }));
+    };
+
+    const handleDelete = async () => {
+        if (isDeleting) return;
+        setIsDeleting(true);
+        try {
+            await onDelete(style.id);
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     // Determine row class based on save status
@@ -235,6 +247,23 @@ const DashboardRow: React.FC<DashboardRowProps> = ({ style, onUpdate }) => {
                     </span>
                 )}
             </td>
+            <td className="delete-cell">
+                <button
+                    className="btn-delete-row"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    title="Delete row"
+                >
+                    {isDeleting ? (
+                        <span className="mini-spinner" />
+                    ) : (
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                    )}
+                </button>
+            </td>
         </tr>
     );
 };
@@ -242,7 +271,7 @@ const DashboardRow: React.FC<DashboardRowProps> = ({ style, onUpdate }) => {
 // Skeleton row for loading state
 const SkeletonRow: React.FC = () => (
     <tr className="skeleton-row">
-        {[...Array(18)].map((_, i) => (
+        {[...Array(19)].map((_, i) => (
             <td key={i}>
                 <div className="skeleton-cell" />
             </td>
@@ -259,6 +288,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [filterText, setFilterText] = useState('');
     const toast = useToast();
 
     const fetchStyles = useCallback(async () => {
@@ -340,6 +370,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
         }
     }, [toast]);
 
+    const handleDelete = useCallback(async (id: string): Promise<void> => {
+        try {
+            await withRetry(
+                () => pb.collection('styles').delete(id),
+                3,
+                1000,
+                (attempt) => {
+                    toast.warning('Delete failed', `Retrying... (attempt ${attempt + 1})`);
+                }
+            );
+            setStyles(prev => prev.filter(s => s.id !== id));
+            toast.success('Deleted', 'Row deleted successfully');
+        } catch (err) {
+            console.error('Error deleting record:', err);
+            toast.error('Failed to delete', getApiErrorMessage(err));
+        }
+    }, [toast]);
+
     // Helper function to calculate derived values for sorting
     const getCalculatedValue = useCallback((style: StyleRecord, column: SortColumn): number | string => {
         const lc = style.price * style.rate;
@@ -374,11 +422,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
         }
     }, [sortColumn]);
 
+    // Filter styles based on search text
+    const filteredStyles = React.useMemo(() => {
+        if (!filterText.trim()) return styles;
+
+        const searchLower = filterText.toLowerCase().trim();
+        return styles.filter(style => {
+            return (
+                style.styleId?.toLowerCase().includes(searchLower) ||
+                style.factory?.toLowerCase().includes(searchLower) ||
+                style.description?.toLowerCase().includes(searchLower) ||
+                style.fabricTrim?.toLowerCase().includes(searchLower) ||
+                style.type?.toLowerCase().includes(searchLower)
+            );
+        });
+    }, [styles, filterText]);
+
     // Sort styles based on current sort column and direction
     const sortedStyles = React.useMemo(() => {
-        if (!sortColumn) return styles;
+        if (!sortColumn) return filteredStyles;
 
-        return [...styles].sort((a, b) => {
+        return [...filteredStyles].sort((a, b) => {
             const aVal = getCalculatedValue(a, sortColumn);
             const bVal = getCalculatedValue(b, sortColumn);
 
@@ -391,7 +455,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
 
             return sortDirection === 'asc' ? comparison : -comparison;
         });
-    }, [styles, sortColumn, sortDirection, getCalculatedValue]);
+    }, [filteredStyles, sortColumn, sortDirection, getCalculatedValue]);
 
     // Skeleton loading for initial fetch
     if (loading) {
@@ -439,6 +503,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                                     <th>Val1</th>
                                     <th>Val2</th>
                                     <th></th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -463,6 +528,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                         <span>Syncing...</span>
                     </div>
                 )}
+                <div className="filter-bar">
+                    <div className="filter-input-wrapper">
+                        <svg className="filter-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Filter by style, factory, description..."
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                            className="filter-input"
+                        />
+                        {filterText && (
+                            <button className="filter-clear" onClick={() => setFilterText('')} title="Clear filter">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+                    {filterText && (
+                        <span className="filter-count">
+                            Showing {sortedStyles.length} of {styles.length} rows
+                        </span>
+                    )}
+                </div>
                 <div className="dashboard-table-wrapper">
                     <table>
                         <thead>
@@ -519,11 +612,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                                     Val2 {sortColumn === 'val2' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
                                 <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             {sortedStyles.map(style => (
-                                <DashboardRow key={style.id} style={style} onUpdate={handleUpdate} />
+                                <DashboardRow key={style.id} style={style} onUpdate={handleUpdate} onDelete={handleDelete} />
                             ))}
                         </tbody>
                     </table>
