@@ -28,4 +28,5 @@ volumes:
 
 networks:
   waha-net:
+    name: my-automation-stack_waha-net
     external: true
