@@ -1,40 +1,31 @@
-# Production Docker Compose for Oracle Cloud
+# Standalone Margin Tracker for Oracle Cloud
+# Uses existing Caddy from main stack for routing
+#
 # Usage: docker compose -f docker-compose.prod.yml up -d --build
 
 services:
-  # PocketBase backend
-  pocketbase:
+  margin_pocketbase:
     image: adrianmusante/pocketbase:latest
-    container_name: pb_margins
+    container_name: margin_pocketbase
     restart: unless-stopped
     volumes:
-      - pocketbase_data:/pocketbase
+      - margin_pocketbase_data:/pocketbase
+    networks:
+      - waha-net
 
-  # React frontend
-  frontend:
+  margin_frontend:
     build:
       context: .
       args:
-        # Points frontend to PocketBase via Caddy proxy
         VITE_PB_URL: /api
     container_name: margin_frontend
     restart: unless-stopped
-
-  # Caddy reverse proxy
-  caddy:
-    image: caddy:alpine
-    container_name: margin_caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile.prod:/etc/caddy/Caddyfile
-      - caddy_data:/data
-    depends_on:
-      - pocketbase
-      - frontend
+    networks:
+      - waha-net
 
 volumes:
-  pocketbase_data:
-  caddy_data:
+  margin_pocketbase_data:
+
+networks:
+  waha-net:
+    external: true
