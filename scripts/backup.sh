@@ -15,7 +15,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$PROJECT_DIR/backups"
-CONTAINER_NAME="pb_margins"
+CONTAINER_NAME="${CONTAINER_NAME:-margin_pocketbase}"
 RETENTION_DAYS=7
 DATE=$(date +%Y-%m-%d_%H%M%S)
 LOG_FILE="$BACKUP_DIR/backup.log"
