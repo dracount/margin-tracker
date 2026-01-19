@@ -1,0 +1,28 @@
+# =============================================================================
+# CADDY CONFIGURATION
+# =============================================================================
+# Choose ONE of the options below by uncommenting the appropriate block.
+#
+# OPTION 1: Production with a real domain
+# - Replace "example.com" with your actual domain
+# - Caddy will automatically obtain and renew SSL certificates via Let's Encrypt
+# - Ensure your domain's DNS points to this server
+#
+# OPTION 2: Local development
+# - Uses localhost on port 80 (no HTTPS)
+# - Suitable for development and testing
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# OPTION 1: Production (uncomment and configure your domain)
+# -----------------------------------------------------------------------------
+# example.com {
+#     reverse_proxy pocketbase:8080
+# }
+
+# -----------------------------------------------------------------------------
+# OPTION 2: Local development (uncomment for localhost access)
+# -----------------------------------------------------------------------------
+:80 {
+    reverse_proxy pocketbase:8080
+}

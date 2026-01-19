@@ -1,0 +1,35 @@
+# =============================================================================
+# DOCKER COMPOSE CONFIGURATION
+# =============================================================================
+# PRODUCTION SECURITY NOTES:
+# - Never commit real secrets or encryption keys to version control
+# - Use a .env file or external secret management for sensitive values
+# - Generate a secure encryption key using: openssl rand -hex 32
+# - Ensure pb_data volume is backed up and secured
+# =============================================================================
+
+services:
+  pocketbase:
+    image: adrianmusante/pocketbase:latest
+    container_name: pb_margins
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - pocketbase_data:/pocketbase
+
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    depends_on:
+      - pocketbase
+
+volumes:
+  caddy_data:
+  pocketbase_data:

@@ -1,0 +1,32 @@
+# Production Caddyfile for IP-based access
+# When you get a domain, replace :80 with your domain name for auto-HTTPS
+
+:80 {
+    # Frontend (React app)
+    reverse_proxy frontend:80
+
+    # PocketBase API
+    handle_path /api/* {
+        reverse_proxy pocketbase:8090
+    }
+
+    # PocketBase admin UI (optional - remove in production if not needed)
+    handle_path /_/* {
+        reverse_proxy pocketbase:8090
+    }
+}
+
+# =============================================================================
+# DOMAIN CONFIG (uncomment when you have a domain)
+# =============================================================================
+# yourdomain.com {
+#     reverse_proxy frontend:80
+#
+#     handle_path /api/* {
+#         reverse_proxy pocketbase:8090
+#     }
+#
+#     handle_path /_/* {
+#         reverse_proxy pocketbase:8090
+#     }
+# }
