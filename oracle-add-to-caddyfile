@@ -1,0 +1,13 @@
+# ADD THIS BLOCK to your Caddyfile on Oracle Cloud
+
+margintracker.my-oracle-n8n.kozow.com {
+    reverse_proxy margin_frontend:80
+
+    handle_path /api/* {
+        reverse_proxy margin_pocketbase:8090
+    }
+
+    handle_path /_/* {
+        reverse_proxy margin_pocketbase:8090
+    }
+}
