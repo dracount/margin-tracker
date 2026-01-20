@@ -246,16 +246,16 @@ body.light-mode tbody tr:nth-child(even) {
 
 tbody tr:hover {
     background: rgba(255, 255, 255, 0.08) !important;
-    transform: translateX(2px);
+    /* Removed transform: translateX(2px) - causes layout jumps during rapid input changes */
 }
 
 body.light-mode tbody tr:hover {
     background: rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Subtle border on left when hovering */
+/* Subtle left border indicator on hover - using box-shadow instead of border to prevent layout shift */
 tbody tr:hover td:first-child {
-    border-left: 2px solid var(--gold);
+    box-shadow: inset 2px 0 0 var(--gold);
 }
 
 input {
@@ -1012,15 +1012,22 @@ body.light-mode .btn-secondary:hover {
 /* ===== Dashboard Loading & Save States ===== */
 
 /* Input wrapper for positioning spinner */
+.validated-input-container {
+    min-width: 70px;
+    width: 100%;
+}
+
 .input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
+    min-width: 60px;
 }
 
 .input-wrapper input {
     flex: 1;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    /* Prevent layout shifts from transitions */
 }
 
 /* Input spinner (small spinner inside input) */
@@ -1146,8 +1153,11 @@ input.input-error {
 /* Status cell and indicators */
 .status-cell {
     width: 40px;
+    min-width: 40px;
     text-align: center;
     padding: 0 0.5rem !important;
+    position: relative;
+    /* Always reserve space to prevent layout shifts */
 }
 
 .status-indicator {
@@ -1157,6 +1167,7 @@ input.input-error {
     width: 24px;
     height: 24px;
     border-radius: 50%;
+    /* Prevent layout shifts by not affecting flow */
 }
 
 .status-indicator.status-saving {
