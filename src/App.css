@@ -1495,3 +1495,708 @@ tbody tr:hover .btn-delete-row {
     width: 14px;
     height: 14px;
 }
+/* ===== Focus Mode (Worksheet Mode) Styles ===== */
+
+/* Focus mode toggle button */
+.focus-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.focus-mode-toggle:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+.focus-mode-active .focus-mode-toggle {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+/* Ticker Tape (Focus Mode KPIs) */
+.ticker-tape {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 1.5rem;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 40px;
+    min-height: 40px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+.ticker-item svg {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.ticker-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.ticker-value {
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.ticker-value.positive {
+    color: var(--green);
+}
+
+.ticker-value.negative {
+    color: var(--red);
+}
+
+.ticker-value.warning {
+    color: var(--gold);
+}
+
+.ticker-separator {
+    color: var(--border);
+    font-weight: 300;
+}
+
+.ticker-alert svg {
+    color: var(--red);
+}
+
+.ticker-warning svg {
+    color: var(--gold);
+}
+
+/* Focus mode dashboard card adjustments */
+.focus-mode-active .dashboard-card {
+    max-height: calc(100vh - 100px);
+    border-radius: 0;
+    margin: 0;
+}
+
+.focus-mode-active .dashboard-content {
+    padding: 0;
+    max-width: none;
+}
+
+.dashboard-card-focus {
+    border-radius: 0 !important;
+}
+
+/* Compact row density in focus mode */
+.focus-mode-active tbody td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.focus-mode-active thead th {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.7rem;
+}
+
+.focus-mode-active .margin-pill {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+}
+
+.focus-mode-active input {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.focus-mode-active .filter-bar {
+    padding: 0.5rem 1rem;
+}
+
+/* Hide analytics container in focus mode (replaced by ticker tape) */
+.focus-mode-active .analytics-container {
+    display: none;
+}
+
+/* ===== Row Selection & Bulk Actions Styles ===== */
+
+/* Checkbox column */
+.checkbox-cell,
+.checkbox-header {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    text-align: center;
+    padding: 0 0.5rem !important;
+}
+
+.row-checkbox,
+.header-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--gold);
+}
+
+/* Selected row highlighting */
+.row-selected {
+    background: rgba(245, 158, 11, 0.1) !important;
+}
+
+.row-selected td:first-child {
+    border-left: 3px solid var(--gold);
+}
+
+/* Bulk Action Bar */
+.bulk-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+    border-bottom: 1px solid var(--gold);
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bulk-action-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #f1f5f9;
+}
+
+.bulk-count {
+    background: var(--gold);
+    color: #0f172a;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.bulk-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bulk-btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.bulk-btn-danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: var(--red);
+}
+
+.bulk-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+}
+
+.bulk-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+.bulk-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Focus mode adjustments for checkbox */
+.focus-mode-active .checkbox-cell,
+.focus-mode-active .checkbox-header {
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+}
+
+.focus-mode-active .row-checkbox,
+.focus-mode-active .header-checkbox {
+    width: 14px;
+    height: 14px;
+}
+
+/* ===== Visual Intelligence - Status Pillars ===== */
+
+/* Status pillar - 4px left border based on margin status */
+tbody tr.status-critical td:first-child {
+    border-left: 4px solid var(--red);
+}
+
+tbody tr.status-warning td:first-child {
+    border-left: 4px solid var(--gold);
+}
+
+tbody tr.status-good td:first-child {
+    border-left: 4px solid #4ade80;
+}
+
+tbody tr.status-excellent td:first-child {
+    border-left: 4px solid var(--green);
+}
+
+/* Override for selected rows - keep selection styling but add pillar on checkbox cell */
+tbody tr.row-selected.status-critical td.checkbox-cell {
+    border-left: 4px solid var(--red);
+}
+
+tbody tr.row-selected.status-warning td.checkbox-cell {
+    border-left: 4px solid var(--gold);
+}
+
+tbody tr.row-selected.status-good td.checkbox-cell {
+    border-left: 4px solid #4ade80;
+}
+
+tbody tr.row-selected.status-excellent td.checkbox-cell {
+    border-left: 4px solid var(--green);
+}
+
+/* ===== Visual Intelligence - Sparklines (Micro-Charts) ===== */
+
+.sparkline-cell {
+    position: relative;
+}
+
+.sparkline-bar {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 60%;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 2px;
+    z-index: 0;
+    transition: width 0.3s ease;
+}
+
+.sparkline-value {
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== Interactive Chart Filtering ===== */
+
+.analytics-bar-group {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.25rem;
+    border-radius: 4px;
+}
+
+.analytics-bar-group:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.analytics-bar-group.active-filter {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid var(--gold);
+}
+
+/* Filter chip indicator */
+.filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid var(--gold);
+    border-radius: 16px;
+    font-size: 0.8rem;
+    color: var(--gold);
+}
+
+.filter-chip-remove {
+    background: none;
+    border: none;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.filter-chip-remove:hover {
+    background: rgba(245, 158, 11, 0.3);
+}
+
+/* ===== Sticky Left Columns ===== */
+
+/* Checkbox column - sticky first */
+thead th.checkbox-header,
+tbody td.checkbox-cell {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: inherit;
+}
+
+thead th.checkbox-header {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+    z-index: 12;
+}
+
+tbody td.checkbox-cell {
+    background: var(--bg);
+}
+
+tbody tr:nth-child(even) td.checkbox-cell {
+    background: rgba(17, 24, 39, 1);
+}
+
+tbody tr:hover td.checkbox-cell {
+    background: rgba(30, 41, 59, 1) !important;
+}
+
+tbody tr.row-selected td.checkbox-cell {
+    background: rgba(35, 30, 20, 1) !important;
+}
+
+/* Style # column - sticky second */
+thead th.sticky-col-style,
+tbody td.sticky-col-style {
+    position: sticky;
+    left: 40px;
+    z-index: 2;
+    background: inherit;
+}
+
+thead th.sticky-col-style {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+    z-index: 12;
+}
+
+tbody td.sticky-col-style {
+    background: var(--bg);
+    cursor: pointer;
+    color: var(--gold);
+    font-weight: 500;
+}
+
+tbody td.sticky-col-style:hover {
+    text-decoration: underline;
+}
+
+tbody tr:nth-child(even) td.sticky-col-style {
+    background: rgba(17, 24, 39, 1);
+}
+
+tbody tr:hover td.sticky-col-style {
+    background: rgba(30, 41, 59, 1) !important;
+}
+
+tbody tr.row-selected td.sticky-col-style {
+    background: rgba(35, 30, 20, 1) !important;
+}
+
+/* Shadow effect for sticky columns */
+thead th.sticky-col-style::after,
+tbody td.sticky-col-style::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.15), transparent);
+    pointer-events: none;
+}
+
+/* Focus mode adjustments for sticky columns */
+.focus-mode-active thead th.sticky-col-style,
+.focus-mode-active tbody td.sticky-col-style {
+    left: 32px;
+}
+
+/* ===== Context Drawer (Slide-Over Panel) ===== */
+
+.context-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.context-drawer-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.context-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 90vw;
+    background: linear-gradient(180deg, #1e293b, var(--bg));
+    border-left: 1px solid var(--border);
+    z-index: 1001;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+}
+
+.context-drawer.open {
+    transform: translateX(0);
+}
+
+.context-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.context-drawer-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.context-drawer-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.context-drawer-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+.context-drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.context-section {
+    margin-bottom: 1.5rem;
+}
+
+.context-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.context-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.context-detail-item {
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.context-detail-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+.context-detail-value {
+    font-size: 0.95rem;
+    color: #f1f5f9;
+    font-weight: 500;
+}
+
+.context-detail-item.full-width {
+    grid-column: span 2;
+}
+
+.context-margin-display {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.context-margin-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.context-margin-value.high { color: var(--green); }
+.context-margin-value.medium { color: var(--gold); }
+.context-margin-value.low { color: var(--red); }
+
+.context-margin-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
+/* ===== Column Settings Dropdown ===== */
+
+.column-settings {
+    position: relative;
+}
+
+.column-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.column-settings-btn:hover,
+.column-settings-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.column-settings-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 200px;
+    z-index: 100;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.column-settings-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+}
+
+.column-settings-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #f1f5f9;
+    transition: all 0.15s ease;
+}
+
+.column-settings-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.column-settings-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--gold);
+}
+
+.column-settings-item svg {
+    color: #64748b;
+}
+
+/* Hidden column indicator in header */
+th.column-hidden {
+    display: none;
+}
+
+td.column-hidden {
+    display: none;
+}

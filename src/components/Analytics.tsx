@@ -10,25 +10,7 @@ import {
 } from 'lucide-react';
 import { StyleRecord } from '../hooks/useMarginCalculator';
 
-interface AnalyticsProps {
-    styles: StyleRecord[];
-}
-
-interface CardData {
-    label: string;
-    value: string;
-    icon: React.ReactNode;
-    color: 'green' | 'red' | 'gold' | 'blue';
-    subtext?: string;
-}
-
-interface MarginBracket {
-    label: string;
-    count: number;
-    percentage: number;
-    color: string;
-}
-
+// Shared calculation function
 const calculateStyleMetrics = (style: StyleRecord) => {
     const units = style.units || 0;
     const price = style.price || 0;
@@ -36,7 +18,6 @@ const calculateStyleMetrics = (style: StyleRecord) => {
     const extraCost = style.extraCost || 0;
     const sellingPrice = style.sellingPrice || 0;
 
-    // Match the formula from useMarginCalculator: LC = (Price * Rate) / 6.2
     const lc = (price * rate) / 6.2;
     const totalCost = lc + extraCost;
     const revenue = sellingPrice * units;
@@ -47,8 +28,9 @@ const calculateStyleMetrics = (style: StyleRecord) => {
     return { revenue, profit, margin, units };
 };
 
-export const Analytics: React.FC<AnalyticsProps> = ({ styles }) => {
-    const analytics = useMemo(() => {
+// Shared analytics calculation hook
+const useAnalyticsData = (styles: StyleRecord[]) => {
+    return useMemo(() => {
         let totalRevenue = 0;
         let totalProfit = 0;
         let totalUnits = 0;
@@ -57,10 +39,10 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles }) => {
 
         const marginBrackets = {
             negative: 0,
-            low: 0,      // < 15%
-            medium: 0,   // 15-22%
-            good: 0,     // 22-30%
-            excellent: 0 // > 30%
+            low: 0,
+            medium: 0,
+            good: 0,
+            excellent: 0
         };
 
         styles.forEach(style => {
@@ -84,7 +66,6 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles }) => {
             }
         });
 
-        // Weighted average margin (weighted by revenue)
         const weightedAvgMargin = totalRevenue > 0
             ? (totalProfit / totalRevenue) * 100
             : 0;
@@ -100,27 +81,135 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles }) => {
             totalItems: styles.length
         };
     }, [styles]);
+};
 
-    const formatCurrency = (value: number) => {
-        return value.toLocaleString('en-ZA', {
-            style: 'currency',
-            currency: 'ZAR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
+const formatCurrency = (value: number) => {
+    if (Math.abs(value) >= 1000000) {
+        return `R${(value / 1000000).toFixed(1)}M`;
+    }
+    if (Math.abs(value) >= 1000) {
+        return `R${(value / 1000).toFixed(0)}K`;
+    }
+    return value.toLocaleString('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    });
+};
+
+const formatCurrencyFull = (value: number) => {
+    return value.toLocaleString('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    });
+};
+
+// Ticker Tape component for Focus Mode
+interface TickerTapeProps {
+    styles: StyleRecord[];
+}
+
+export const TickerTape: React.FC<TickerTapeProps> = ({ styles }) => {
+    const analytics = useAnalyticsData(styles);
+
+    if (styles.length === 0) return null;
+
+    return (
+        <div className="ticker-tape">
+            <div className="ticker-item">
+                <DollarSign size={14} />
+                <span className="ticker-label">Rev:</span>
+                <span className="ticker-value">{formatCurrency(analytics.totalRevenue)}</span>
+            </div>
+            <div className="ticker-separator">|</div>
+            <div className="ticker-item ticker-profit">
+                <TrendingUp size={14} />
+                <span className="ticker-label">Prof:</span>
+                <span className={`ticker-value ${analytics.totalProfit >= 0 ? 'positive' : 'negative'}`}>
+                    {formatCurrency(analytics.totalProfit)}
+                </span>
+            </div>
+            <div className="ticker-separator">|</div>
+            <div className="ticker-item">
+                <Percent size={14} />
+                <span className="ticker-label">Margin:</span>
+                <span className={`ticker-value ${analytics.weightedAvgMargin >= 22 ? 'positive' : analytics.weightedAvgMargin >= 15 ? 'warning' : 'negative'}`}>
+                    {analytics.weightedAvgMargin.toFixed(1)}%
+                </span>
+            </div>
+            <div className="ticker-separator">|</div>
+            <div className="ticker-item">
+                <Package size={14} />
+                <span className="ticker-label">Units:</span>
+                <span className="ticker-value">{analytics.totalUnits.toLocaleString()}</span>
+            </div>
+            {analytics.belowTarget > 0 && (
+                <>
+                    <div className="ticker-separator">|</div>
+                    <div className="ticker-item ticker-alert">
+                        <AlertTriangle size={14} />
+                        <span className="ticker-value negative">{analytics.belowTarget} critical</span>
+                    </div>
+                </>
+            )}
+            {analytics.atRisk > 0 && (
+                <>
+                    <div className="ticker-separator">|</div>
+                    <div className="ticker-item ticker-warning">
+                        <AlertCircle size={14} />
+                        <span className="ticker-value warning">{analytics.atRisk} at risk</span>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+interface AnalyticsProps {
+    styles: StyleRecord[];
+    activeFilter?: string | null;
+    onFilterChange?: (filter: string | null) => void;
+}
+
+interface CardData {
+    label: string;
+    value: string;
+    icon: React.ReactNode;
+    color: 'green' | 'red' | 'gold' | 'blue';
+    subtext?: string;
+}
+
+interface MarginBracket {
+    label: string;
+    count: number;
+    percentage: number;
+    color: string;
+}
+
+export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFilterChange }) => {
+    const analytics = useAnalyticsData(styles);
+
+    // Handle bar click for filtering
+    const handleBarClick = (filterKey: string) => {
+        if (onFilterChange) {
+            onFilterChange(activeFilter === filterKey ? null : filterKey);
+        }
     };
 
     const cards: CardData[] = [
         {
             label: 'Total Revenue',
-            value: formatCurrency(analytics.totalRevenue),
+            value: formatCurrencyFull(analytics.totalRevenue),
             icon: <DollarSign size={24} />,
             color: 'blue',
             subtext: `${analytics.totalItems} items`
         },
         {
             label: 'Total Profit',
-            value: formatCurrency(analytics.totalProfit),
+            value: formatCurrencyFull(analytics.totalProfit),
             icon: <TrendingUp size={24} />,
             color: analytics.totalProfit >= 0 ? 'green' : 'red'
         },
@@ -152,36 +241,41 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles }) => {
         }
     ];
 
-    const marginDistribution: MarginBracket[] = [
+    const marginDistribution: (MarginBracket & { filterKey: string })[] = [
         {
             label: 'Negative',
             count: analytics.marginBrackets.negative,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.negative / analytics.totalItems) * 100 : 0,
-            color: 'var(--red)'
+            color: 'var(--red)',
+            filterKey: 'negative'
         },
         {
             label: '< 15%',
             count: analytics.marginBrackets.low,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.low / analytics.totalItems) * 100 : 0,
-            color: '#f87171'
+            color: '#f87171',
+            filterKey: 'low'
         },
         {
             label: '15-22%',
             count: analytics.marginBrackets.medium,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.medium / analytics.totalItems) * 100 : 0,
-            color: 'var(--gold)'
+            color: 'var(--gold)',
+            filterKey: 'medium'
         },
         {
             label: '22-30%',
             count: analytics.marginBrackets.good,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.good / analytics.totalItems) * 100 : 0,
-            color: '#4ade80'
+            color: '#4ade80',
+            filterKey: 'good'
         },
         {
             label: '> 30%',
             count: analytics.marginBrackets.excellent,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.excellent / analytics.totalItems) * 100 : 0,
-            color: 'var(--green)'
+            color: 'var(--green)',
+            filterKey: 'excellent'
         }
     ];
 
@@ -215,7 +309,12 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles }) => {
                 </div>
                 <div className="analytics-chart">
                     {marginDistribution.map((bracket, index) => (
-                        <div key={index} className="analytics-bar-group">
+                        <div
+                            key={index}
+                            className={`analytics-bar-group ${activeFilter === bracket.filterKey ? 'active-filter' : ''}`}
+                            onClick={() => handleBarClick(bracket.filterKey)}
+                            title={`Click to filter by ${bracket.label}`}
+                        >
                             <div className="analytics-bar-label">{bracket.label}</div>
                             <div className="analytics-bar-wrapper">
                                 <div
