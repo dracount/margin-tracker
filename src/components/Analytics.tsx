@@ -6,7 +6,8 @@ import {
     Package,
     AlertTriangle,
     AlertCircle,
-    BarChart3
+    BarChart3,
+    Maximize2
 } from 'lucide-react';
 import { StyleRecord } from '../hooks/useMarginCalculator';
 
@@ -172,6 +173,7 @@ interface AnalyticsProps {
     styles: StyleRecord[];
     activeFilter?: string | null;
     onFilterChange?: (filter: string | null) => void;
+    onToggleFocusMode?: () => void;
 }
 
 interface CardData {
@@ -189,7 +191,7 @@ interface MarginBracket {
     color: string;
 }
 
-export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFilterChange }) => {
+export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFilterChange, onToggleFocusMode }) => {
     const analytics = useAnalyticsData(styles);
 
     // Handle bar click for filtering
@@ -306,6 +308,16 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFi
                 <div className="analytics-chart-header">
                     <BarChart3 size={20} />
                     <h3>Margin Distribution</h3>
+                    {onToggleFocusMode && (
+                        <button
+                            className="focus-mode-btn-large"
+                            onClick={onToggleFocusMode}
+                            title="Enter Focus Mode (Shift+F)"
+                        >
+                            <Maximize2 size={20} />
+                            <span>Focus Mode</span>
+                        </button>
+                    )}
                 </div>
                 <div className="analytics-chart">
                     {marginDistribution.map((bracket, index) => (

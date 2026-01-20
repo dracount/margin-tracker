@@ -1,0 +1,98 @@
+Here is a comprehensive **Product Requirement Document (PRD) / Implementation Sheet**. This is structured to be handed directly to a development team or used as a project roadmap.
+
+---
+
+# Project: Production Dashboard – "Worksheet Mode" Refactor
+**Objective:** Transform the current reporting dashboard into a high-density, operational workflow tool similar to a spreadsheet.
+**Key Metrics:** Reduce clicks-to-edit by 80%, increase visible data density by 100%, and improve outlier detection.
+
+---
+
+## 1. Feature: Focus Mode (The Layout Strategy)
+*Replaces the standard "Collapsible Header" concept with a dedicated work state.*
+
+### A. The Toggle
+*   **Location:** Top right of the table container (Icon: "Expand" or "Focus").
+*   **Keyboard Shortcut:** `Shift + F`.
+*   **State Persistence:** Save state to `localStorage`. If a user leaves in Focus Mode, they return in Focus Mode.
+
+### B. View States
+| Element | Default (Dashboard Mode) | Focus Mode (Worksheet Mode) |
+| :--- | :--- | :--- |
+| **KPI Cards** | Full block (200px height) | **Ticker Tape:** Single sticky top bar (30px). Format: `Rev: 25M | Prof: 17M | Margin: 68%` |
+| **Chart** | Visible | **Hidden** |
+| **Table Height** | Fixed / Scrollable within window | **Maximized:** `calc(100vh - 50px)` |
+| **Row Density** | Standard (48px height) | **Compact** (32px height) |
+| **Columns** | All columns visible | **Trimmed:** Hide static columns (e.g., Factory, Fabric) via user preference. |
+
+---
+
+## 2. Feature: Inline Editing (The "Excel Factor")
+*Goal: Frictionless data manipulation.*
+
+### A. Interaction Model
+*   **Click-to-Edit:** Clicking a cell converts it to an input field immediately. No "Edit" icon required.
+*   **Save on Blur:** Clicking away triggers the save.
+*   **Optimistic UI:** The UI updates the number *instantly*. The API call happens in the background. If the API fails, revert the number and show a "Retry" toast notification.
+
+### B. Keyboard Navigation (Accessibility)
+*   `Tab`: Moves focus to the next cell to the right (saves current cell).
+*   `Shift + Tab`: Moves focus left.
+*   `Arrow Keys`: Navigate up/down/left/right through the grid.
+*   `Enter`: Confirms edit and moves selection down one row.
+
+### C. Bulk Actions
+*   **Selection:** Add a checkbox column to the far left.
+*   **Shift-Select:** Click row 1, hold Shift, click row 10 (selects all 10).
+*   **Action Bar:** When rows are selected, a floating bottom bar appears: "Update Factory," "Bulk Status Change," "Export Selected."
+
+---
+
+## 3. Feature: Visual Intelligence & "Glanceability"
+*Goal: Help the eye spot outliers without reading every number.*
+
+### A. Status Pillars (Left Border)
+*   Replace full-row background colors (which reduce readability) with a **4px colored bar** on the far left of the row.
+    *   🔴 Red: Margin < 15%
+    *   🟠 Orange: Margin 15-22%
+    *   🟢 Green: Margin > 30%
+
+### B. Micro-Charts (Sparklines)
+*   **Column:** "Total Units" or "Performance".
+*   **Implementation:** A small gray horizontal bar inside the cell behind the number, representing the value relative to the dataset max.
+
+### C. Interactive Chart Filtering
+*   **Action:** Clicking the "Red Bar" (Below Target) in the header chart.
+*   **Result:** The table instantly filters to show **only** the 3 items that are below target.
+*   **Indicator:** A filter chip appears: `[x] Status: Critical`.
+
+---
+
+## 4. Feature: Navigation & Context
+*Goal: Manage wide and deep data.*
+
+### A. Sticky Elements
+*   **Sticky Header:** Table column headers remain fixed at the top during vertical scroll.
+*   **Sticky Columns:** "Style #" and "Description" remain fixed to the left during horizontal scroll.
+
+### B. The Context Drawer (Slide-Over)
+*   **Trigger:** Clicking the `Style #` link.
+*   **Action:** Opens a panel sliding in from the right (covering 30% of screen).
+*   **Content:**
+    *   Full "Fabric/Trim" details.
+    *   Production history / Change Log.
+    *   Comment threads.
+*   **Benefit:** The user never leaves the main table context.
+
+---
+
+## 5. Technical Specifications (For Developers)
+
+### Frontend Requirements
+1.  **Virtualization:** Use a library like `react-window` or `tanstack-virtual`.
+    *   *Why:* To render 1,000+ rows smoothly without DOM lag.
+2.  **State Management:**
+    *   Must handle "Dirty State" (unsaved changes) if the user tries to close the tab.
+    *   Undo/Redo stack (Ctrl+Z support) for the last 5 actions is a "Nice to Have" for Phase 2.
+3.  **Validation:**
+    *

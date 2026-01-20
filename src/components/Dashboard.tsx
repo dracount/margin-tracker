@@ -60,33 +60,26 @@ interface DashboardRowProps {
     onOpenDrawer: (style: StyleRecord) => void;
 }
 
-// Bulk Action Bar component
-interface BulkActionBarProps {
+// Inline Selection Actions component (appears in filter bar)
+interface InlineSelectionActionsProps {
     selectedCount: number;
     onClearSelection: () => void;
     onBulkDelete: () => void;
     isDeleting: boolean;
 }
 
-const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onClearSelection, onBulkDelete, isDeleting }) => {
+const InlineSelectionActions: React.FC<InlineSelectionActionsProps> = ({ selectedCount, onClearSelection, onBulkDelete, isDeleting }) => {
     if (selectedCount === 0) return null;
 
     return (
-        <div className="bulk-action-bar">
-            <div className="bulk-action-info">
-                <span className="bulk-count">{selectedCount}</span>
-                <span>row{selectedCount > 1 ? 's' : ''} selected</span>
-            </div>
-            <div className="bulk-actions">
-                <button className="bulk-btn bulk-btn-danger" onClick={onBulkDelete} disabled={isDeleting}>
-                    {isDeleting ? <span className="mini-spinner" /> : <Trash2 size={16} />}
-                    <span>Delete Selected</span>
-                </button>
-                <button className="bulk-btn bulk-btn-secondary" onClick={onClearSelection}>
-                    <X size={16} />
-                    <span>Clear</span>
-                </button>
-            </div>
+        <div className="inline-selection-actions">
+            <span className="selection-count">{selectedCount} selected</span>
+            <button className="inline-action-btn inline-action-delete" onClick={onBulkDelete} disabled={isDeleting} title="Delete selected rows">
+                {isDeleting ? <span className="mini-spinner" /> : <Trash2 size={14} />}
+            </button>
+            <button className="inline-action-btn inline-action-clear" onClick={onClearSelection} title="Clear selection">
+                <X size={14} />
+            </button>
         </div>
     );
 };
@@ -147,10 +140,71 @@ interface ContextDrawerProps {
     style: StyleRecord | null;
     isOpen: boolean;
     onClose: () => void;
+    onUpdate: (id: string, data: Partial<StyleRecord>) => Promise<boolean>;
 }
 
-const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose }) => {
-    const calculated = useMarginCalculator(style || {} as StyleRecord);
+interface DrawerEditState {
+    fabricTrim: string;
+    units: number;
+    pack: number;
+    price: number;
+    rate: number;
+    extraCost: number;
+    sellingPrice: number;
+}
+
+const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose, onUpdate }) => {
+    // Local state for editable fields
+    const [editState, setEditState] = useState<DrawerEditState>({
+        fabricTrim: '',
+        units: 0,
+        pack: 0,
+        price: 0,
+        rate: 0,
+        extraCost: 0,
+        sellingPrice: 0,
+    });
+    const [hasChanges, setHasChanges] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Sync local state with incoming style
+    useEffect(() => {
+        if (style) {
+            setEditState({
+                fabricTrim: style.fabricTrim || '',
+                units: style.units,
+                pack: style.pack,
+                price: style.price,
+                rate: style.rate,
+                extraCost: style.extraCost,
+                sellingPrice: style.sellingPrice,
+            });
+            setHasChanges(false);
+        }
+    }, [style]);
+
+    // Calculate derived values using the edited state
+    const calculatedStyle = style ? { ...style, ...editState } : ({} as StyleRecord);
+    const calculated = useMarginCalculator(calculatedStyle);
+
+    // Handle field changes
+    const handleFieldChange = (field: keyof DrawerEditState, value: string | number) => {
+        setEditState(prev => ({ ...prev, [field]: value }));
+        setHasChanges(true);
+    };
+
+    // Handle save
+    const handleSave = async () => {
+        if (!style || !hasChanges) return;
+
+        setIsSaving(true);
+        const success = await onUpdate(style.id, editState);
+        setIsSaving(false);
+
+        if (success) {
+            setHasChanges(false);
+        }
+    };
 
     // Handle escape key to close
     useEffect(() => {
@@ -164,15 +218,6 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose })
     }, [isOpen, onClose]);
 
     if (!style) return null;
-
-    const formatCurrency = (value: number) => {
-        return value.toLocaleString('en-ZA', {
-            style: 'currency',
-            currency: 'ZAR',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    };
 
     return (
         <>
@@ -203,9 +248,15 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose })
                                 <div className="context-detail-label">Description</div>
                                 <div className="context-detail-value">{style.description || '-'}</div>
                             </div>
-                            <div className="context-detail-item full-width">
+                            <div className="context-detail-item full-width editable">
                                 <div className="context-detail-label">Fabric/Trim</div>
-                                <div className="context-detail-value">{style.fabricTrim || '-'}</div>
+                                <input
+                                    type="text"
+                                    className="drawer-input"
+                                    value={editState.fabricTrim}
+                                    onChange={(e) => handleFieldChange('fabricTrim', e.target.value)}
+                                    placeholder="Enter fabric/trim..."
+                                />
                             </div>
                         </div>
                     </div>
@@ -213,13 +264,25 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose })
                     <div className="context-section">
                         <div className="context-section-title">Quantity</div>
                         <div className="context-detail-grid">
-                            <div className="context-detail-item">
+                            <div className="context-detail-item editable">
                                 <div className="context-detail-label">Units</div>
-                                <div className="context-detail-value">{style.units.toLocaleString()}</div>
+                                <input
+                                    type="number"
+                                    className="drawer-input"
+                                    value={editState.units}
+                                    onChange={(e) => handleFieldChange('units', Number(e.target.value))}
+                                    min="0"
+                                />
                             </div>
-                            <div className="context-detail-item">
+                            <div className="context-detail-item editable">
                                 <div className="context-detail-label">Pack</div>
-                                <div className="context-detail-value">{style.pack}</div>
+                                <input
+                                    type="number"
+                                    className="drawer-input"
+                                    value={editState.pack}
+                                    onChange={(e) => handleFieldChange('pack', Number(e.target.value))}
+                                    min="1"
+                                />
                             </div>
                         </div>
                     </div>
@@ -227,29 +290,57 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose })
                     <div className="context-section">
                         <div className="context-section-title">Pricing</div>
                         <div className="context-detail-grid">
-                            <div className="context-detail-item">
+                            <div className="context-detail-item editable">
                                 <div className="context-detail-label">Price</div>
-                                <div className="context-detail-value">{style.price.toFixed(2)}</div>
+                                <input
+                                    type="number"
+                                    className="drawer-input"
+                                    value={editState.price}
+                                    onChange={(e) => handleFieldChange('price', Number(e.target.value))}
+                                    step="0.01"
+                                    min="0"
+                                />
                             </div>
-                            <div className="context-detail-item">
+                            <div className="context-detail-item editable">
                                 <div className="context-detail-label">Rate</div>
-                                <div className="context-detail-value">{style.rate.toFixed(4)}</div>
+                                <input
+                                    type="number"
+                                    className="drawer-input"
+                                    value={editState.rate}
+                                    onChange={(e) => handleFieldChange('rate', Number(e.target.value))}
+                                    step="0.0001"
+                                    min="0"
+                                />
                             </div>
                             <div className="context-detail-item">
                                 <div className="context-detail-label">LC (ZAR)</div>
                                 <div className="context-detail-value">{calculated.lc}</div>
                             </div>
-                            <div className="context-detail-item">
+                            <div className="context-detail-item editable">
                                 <div className="context-detail-label">Extra Cost (ZAR)</div>
-                                <div className="context-detail-value">{formatCurrency(style.extraCost)}</div>
+                                <input
+                                    type="number"
+                                    className="drawer-input"
+                                    value={editState.extraCost}
+                                    onChange={(e) => handleFieldChange('extraCost', Number(e.target.value))}
+                                    step="0.01"
+                                    min="0"
+                                />
                             </div>
                             <div className="context-detail-item">
                                 <div className="context-detail-label">Total Cost</div>
                                 <div className="context-detail-value">{calculated.totalCost}</div>
                             </div>
-                            <div className="context-detail-item">
+                            <div className="context-detail-item editable">
                                 <div className="context-detail-label">Selling Price (ZAR)</div>
-                                <div className="context-detail-value">{formatCurrency(style.sellingPrice)}</div>
+                                <input
+                                    type="number"
+                                    className="drawer-input"
+                                    value={editState.sellingPrice}
+                                    onChange={(e) => handleFieldChange('sellingPrice', Number(e.target.value))}
+                                    step="0.01"
+                                    min="0"
+                                />
                             </div>
                         </div>
                     </div>
@@ -281,6 +372,22 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose })
                             </div>
                         </div>
                     </div>
+                </div>
+                <div className="context-drawer-footer">
+                    <button
+                        className="drawer-save-btn"
+                        onClick={handleSave}
+                        disabled={!hasChanges || isSaving}
+                    >
+                        {isSaving ? (
+                            <>
+                                <span className="mini-spinner" />
+                                Saving...
+                            </>
+                        ) : (
+                            'Save Changes'
+                        )}
+                    </button>
                 </div>
             </div>
         </>
@@ -1125,6 +1232,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                     styles={styles}
                     activeFilter={marginFilter}
                     onFilterChange={setMarginFilter}
+                    onToggleFocusMode={toggleFocusMode}
                 />
             )}
             <div className={`dashboard-card ${isRefreshing ? 'dashboard-refreshing' : ''} ${focusMode ? 'dashboard-card-focus' : ''}`}>
@@ -1170,6 +1278,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                             </button>
                         )}
                     </div>
+                    <InlineSelectionActions
+                        selectedCount={selectedIds.size}
+                        onClearSelection={clearSelection}
+                        onBulkDelete={handleBulkDelete}
+                        isDeleting={isBulkDeleting}
+                    />
                     {(filterText || marginFilter) && (
                         <span className="filter-count">
                             Showing {sortedStyles.length} of {styles.length} rows
@@ -1186,12 +1300,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                         </div>
                     )}
                 </div>
-                <BulkActionBar
-                    selectedCount={selectedIds.size}
-                    onClearSelection={clearSelection}
-                    onBulkDelete={handleBulkDelete}
-                    isDeleting={isBulkDeleting}
-                />
                 <div className="dashboard-table-wrapper">
                     <table>
                         <thead>
@@ -1306,6 +1414,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                 style={drawerStyle}
                 isOpen={isDrawerOpen}
                 onClose={closeDrawer}
+                onUpdate={handleUpdate}
             />
         </div>
     );

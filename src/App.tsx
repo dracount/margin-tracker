@@ -7,6 +7,7 @@ import { AddEntry } from './components/AddEntry';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { Login } from './components/Login';
 import { ToastProvider, useToast } from './components/Toast';
+import { ThemeToggle } from './components/ThemeToggle';
 import { StyleRecord } from './hooks/useMarginCalculator';
 import './App.css';
 
@@ -130,11 +131,14 @@ function AppContent() {
                 <header className="glass-header">
                     <div>
                         <h1>Margin Tracker</h1>
-                        {user && <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>Logged in as {user.email}</p>}
+                        {user && <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>Logged in as {user.email}</p>}
                     </div>
-                    <button className="btn-logout" onClick={logout}>
-                        Logout
-                    </button>
+                    <div className="header-actions">
+                        <ThemeToggle />
+                        <button className="btn-logout" onClick={logout}>
+                            Logout
+                        </button>
+                    </div>
                 </header>
                 <div className="dashboard-content">
                     <div className="customer-selection grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
@@ -147,7 +151,7 @@ function AppContent() {
                             >
                                 {customer.logo && <img src={pb.files.getUrl(customer, customer.logo)} alt={customer.name} style={{ maxWidth: '100px', marginBottom: '1rem' }} />}
                                 <h3>{customer.name}</h3>
-                                <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{customer.customer_id}</p>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{customer.customer_id}</p>
                             </div>
                         ))}
                         <div
@@ -159,7 +163,7 @@ function AppContent() {
                                 <line x1="12" y1="5" x2="12" y2="19" />
                                 <line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
-                            <h3 style={{ color: '#94a3b8', margin: 0 }}>Add Customer</h3>
+                            <h3 style={{ color: 'var(--text-secondary)', margin: 0 }}>Add Customer</h3>
                         </div>
                     </div>
                 </div>
@@ -215,7 +219,7 @@ function AppContent() {
             <header className="glass-header">
                 <div>
                     <h1>{selectedCustomer?.name}</h1>
-                    <p style={{ color: '#94a3b8' }}>Margin Tracking Dashboard</p>
+                    <p style={{ color: 'var(--text-secondary)' }}>Margin Tracking Dashboard</p>
                 </div>
                 <div className="header-actions">
                     <button className="btn-import" onClick={() => setShowImportModal(true)}>
@@ -254,6 +258,7 @@ function AppContent() {
                     <button className="btn-back" onClick={() => setSelectedCustomerId(null)}>
                         Switch Customer
                     </button>
+                    <ThemeToggle />
                     <button className="btn-logout" onClick={logout}>
                         Logout
                     </button>
