@@ -6,32 +6,84 @@
 }
 
 :root {
+    /* === Background Colors === */
     --bg: #0f172a;
     --bg-secondary: #1e293b;
     --glass: rgba(255, 255, 255, 0.03);
+    --glass-hover: rgba(255, 255, 255, 0.06);
+    --glass-active: rgba(255, 255, 255, 0.08);
+
+    /* === Border Colors === */
     --border: rgba(255, 255, 255, 0.1);
+    --border-hover: rgba(255, 255, 255, 0.2);
+    --border-focus: rgba(245, 158, 11, 0.5);
+
+    /* === Text Colors === */
     --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
+    --text-disabled: #475569;
+
+    /* === Status Colors === */
     --green: #10b981;
+    --green-hover: #059669;
     --red: #ef4444;
+    --red-hover: #dc2626;
     --gold: #f59e0b;
+    --gold-hover: #d97706;
+
+    /* === Input States === */
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-bg-hover: rgba(255, 255, 255, 0.08);
+    --input-bg-focus: rgba(255, 255, 255, 0.10);
+    --input-border: rgba(255, 255, 255, 0.15);
+    --input-border-hover: rgba(255, 255, 255, 0.25);
+    --input-readonly-bg: transparent;
+    --input-readonly-text: var(--text-secondary);
+
+    /* === Effects === */
     --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     scroll-behavior: smooth;
 }
 
-/* Light Mode Theme */
+/* === Light Mode Theme === */
 body.light-mode {
+    /* === Background Colors === */
     --bg: #f8fafc;
     --bg-secondary: #e2e8f0;
     --glass: rgba(0, 0, 0, 0.03);
-    --border: rgba(0, 0, 0, 0.1);
-    --text-primary: #1e293b;
+    --glass-hover: rgba(0, 0, 0, 0.06);
+    --glass-active: rgba(0, 0, 0, 0.08);
+
+    /* === Border Colors === */
+    --border: rgba(0, 0, 0, 0.12);
+    --border-hover: rgba(0, 0, 0, 0.2);
+    --border-focus: rgba(217, 119, 6, 0.6);
+
+    /* === Text Colors === */
+    --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #64748b;
+    --text-disabled: #94a3b8;
+
+    /* === Status Colors === */
     --green: #059669;
+    --green-hover: #047857;
     --red: #dc2626;
+    --red-hover: #b91c1c;
     --gold: #d97706;
+    --gold-hover: #b45309;
+
+    /* === Input States === */
+    --input-bg: rgba(0, 0, 0, 0.04);
+    --input-bg-hover: rgba(0, 0, 0, 0.06);
+    --input-bg-focus: rgba(0, 0, 0, 0.08);
+    --input-border: rgba(0, 0, 0, 0.15);
+    --input-border-hover: rgba(0, 0, 0, 0.25);
+    --input-readonly-bg: transparent;
+    --input-readonly-text: var(--text-secondary);
+
+    /* === Effects === */
     --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
@@ -145,21 +197,43 @@ body.light-mode .dashboard-card {
     font-weight: 600;
     font-size: 0.85rem;
     display: inline-block;
+    border: 1px solid transparent;
 }
 
 .margin-pill.high {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.18);
     color: var(--green);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+body.light-mode .margin-pill.high {
+    background: rgba(5, 150, 105, 0.15);
+    color: var(--green);
+    border-color: rgba(5, 150, 105, 0.25);
 }
 
 .margin-pill.medium {
-    background: rgba(245, 158, 11, 0.2);
+    background: rgba(245, 158, 11, 0.18);
     color: var(--gold);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+body.light-mode .margin-pill.medium {
+    background: rgba(217, 119, 6, 0.15);
+    color: var(--gold);
+    border-color: rgba(217, 119, 6, 0.25);
 }
 
 .margin-pill.low {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.18);
     color: var(--red);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+body.light-mode .margin-pill.low {
+    background: rgba(220, 38, 38, 0.15);
+    color: var(--red);
+    border-color: rgba(220, 38, 38, 0.25);
 }
 
 table {
@@ -208,12 +282,12 @@ th {
 th.sortable-header {
     cursor: pointer;
     user-select: none;
-    transition: all 0.2s ease;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 th.sortable-header:hover {
     color: var(--text-primary);
-    background: var(--glass);
+    background: var(--glass-hover);
 }
 
 .sort-indicator {
@@ -231,8 +305,21 @@ td {
     white-space: nowrap;
 }
 
+/* Calculated/read-only cells - subtle background to indicate non-editable */
+td[style*="font-weight: 700"],
+td[style*="fontWeight: 700"] {
+    background: rgba(148, 163, 184, 0.05);
+    color: var(--text-primary);
+    font-weight: 700 !important;
+}
+
+body.light-mode td[style*="font-weight: 700"],
+body.light-mode td[style*="fontWeight: 700"] {
+    background: rgba(100, 116, 139, 0.06);
+}
+
 tbody tr {
-    transition: all 0.2s ease;
+    transition: background-color 0.15s ease;
 }
 
 /* Zebra striping for better readability */
@@ -245,12 +332,12 @@ body.light-mode tbody tr:nth-child(even) {
 }
 
 tbody tr:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: var(--glass-active) !important;
     /* Removed transform: translateX(2px) - causes layout jumps during rapid input changes */
 }
 
 body.light-mode tbody tr:hover {
-    background: rgba(0, 0, 0, 0.05) !important;
+    background: var(--glass-active) !important;
 }
 
 /* Subtle left border indicator on hover - using box-shadow instead of border to prevent layout shift */
@@ -258,23 +345,42 @@ tbody tr:hover td:first-child {
     box-shadow: inset 2px 0 0 var(--gold);
 }
 
+/* === Input Styles - Editable fields are clearly distinguishable === */
 input {
-    background: transparent;
-    border: 1px solid transparent;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     color: var(--text-primary);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px 10px;
+    border-radius: 5px;
     width: 100%;
+    font-size: 0.9rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:hover:not(:disabled):not(:read-only) {
+    background: var(--input-bg-hover);
+    border-color: var(--input-border-hover);
 }
 
 input:focus {
     outline: none;
-    background: var(--glass);
-    border-color: var(--gold);
+    background: var(--input-bg-focus);
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
 body.light-mode input:focus {
-    background: rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+}
+
+/* Read-only and disabled inputs should look non-interactive */
+input:disabled,
+input:read-only {
+    background: var(--input-readonly-bg);
+    border-color: transparent;
+    color: var(--input-readonly-text);
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* Hide number input spinners - values must be typed */
@@ -303,15 +409,17 @@ input[type="number"] {
     padding: 0.5rem 1rem;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s ease;
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-back:hover {
-    background: var(--glass);
+    background: var(--glass-hover);
+    border-color: var(--border-hover);
 }
 
-body.light-mode .btn-back:hover {
-    background: rgba(0, 0, 0, 0.08);
+.btn-back:active {
+    background: var(--glass-active);
 }
 
 /* Analytics Styles */
@@ -517,28 +625,29 @@ body.light-mode .btn-back:hover {
 }
 
 .form-group input {
-    background: var(--glass);
-    border: 1px solid var(--border);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     color: var(--text-primary);
     padding: 0.75rem 1rem;
     border-radius: 8px;
     font-size: 1rem;
-    transition: all 0.2s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-group input:hover:not(:disabled) {
+    background: var(--input-bg-hover);
+    border-color: var(--input-border-hover);
 }
 
 .form-group input:focus {
     outline: none;
-    background: var(--glass);
-    border-color: var(--gold);
+    background: var(--input-bg-focus);
+    border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
-body.light-mode .form-group input {
-    background: rgba(255, 255, 255, 0.8);
-}
-
 body.light-mode .form-group input:focus {
-    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
 }
 
 .form-group input::placeholder {
@@ -623,19 +732,25 @@ body.light-mode .form-group input:focus {
 
 /* Logout Button */
 .btn-logout {
-    background: rgba(239, 68, 68, 0.15);
+    background: rgba(239, 68, 68, 0.12);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: var(--red);
     padding: 0.5rem 1rem;
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .btn-logout:hover {
-    background: rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.5);
+    color: var(--red-hover);
+}
+
+.btn-logout:active {
+    background: rgba(239, 68, 68, 0.25);
 }
 
 /* Header Actions Container */
@@ -889,23 +1004,28 @@ body.light-mode .preview-table th {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--gold), #d97706);
+    background: linear-gradient(135deg, var(--gold), var(--gold-hover));
     border: none;
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -916,15 +1036,17 @@ body.light-mode .preview-table th {
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .btn-secondary:hover {
-    background: var(--glass);
+    background: var(--glass-hover);
+    border-color: var(--border-hover);
 }
 
-body.light-mode .btn-secondary:hover {
-    background: rgba(0, 0, 0, 0.08);
+.btn-secondary:active {
+    transform: translateY(1px);
 }
 
 .import-progress {
@@ -969,22 +1091,27 @@ body.light-mode .btn-secondary:hover {
 
 /* Import Button */
 .btn-import {
-    background: linear-gradient(135deg, var(--green), #059669);
+    background: linear-gradient(135deg, var(--green), var(--green-hover));
     border: none;
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 .btn-import:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-import:active {
+    transform: translateY(0);
 }
 
 .btn-import svg {
@@ -993,7 +1120,7 @@ body.light-mode .btn-secondary:hover {
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, var(--red), #dc2626);
+    background: linear-gradient(135deg, var(--red), var(--red-hover));
     border: none;
     color: white;
     padding: 0.6rem 1.2rem;
@@ -1003,16 +1130,21 @@ body.light-mode .btn-secondary:hover {
     align-items: center;
     gap: 0.5rem;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
 }
 
 .btn-danger:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .btn-danger:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -1503,7 +1635,11 @@ input.input-error {
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border);
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--glass);
+}
+
+body.light-mode .filter-bar {
+    background: rgba(0, 0, 0, 0.02);
 }
 
 .filter-input-wrapper {
@@ -1517,30 +1653,34 @@ input.input-error {
 .filter-icon {
     position: absolute;
     left: 12px;
-    color: #64748b;
+    color: var(--text-muted);
     pointer-events: none;
 }
 
 .filter-input {
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 2.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     border-radius: 8px;
-    color: white;
+    color: var(--text-primary);
     font-size: 0.9rem;
-    transition: all 0.2s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .filter-input:focus {
     outline: none;
-    border-color: var(--gold);
+    border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--input-bg-focus);
+}
+
+body.light-mode .filter-input:focus {
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
 }
 
 .filter-input::placeholder {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .filter-clear {
@@ -1548,19 +1688,19 @@ input.input-error {
     right: 8px;
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--text-muted);
     cursor: pointer;
     padding: 4px;
     border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .filter-clear:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    background: var(--glass-hover);
 }
 
 .filter-count {
