@@ -69,15 +69,13 @@ interface InlineSelectionActionsProps {
 }
 
 const InlineSelectionActions: React.FC<InlineSelectionActionsProps> = ({ selectedCount, onClearSelection, onBulkDelete, isDeleting }) => {
-    if (selectedCount === 0) return null;
-
     return (
-        <div className="inline-selection-actions">
+        <div className={`inline-selection-actions ${selectedCount === 0 ? 'hidden' : ''}`}>
             <span className="selection-count">{selectedCount} selected</span>
-            <button className="inline-action-btn inline-action-delete" onClick={onBulkDelete} disabled={isDeleting} title="Delete selected rows">
+            <button className="inline-action-btn inline-action-delete" onClick={onBulkDelete} disabled={isDeleting || selectedCount === 0} title="Delete selected rows">
                 {isDeleting ? <span className="mini-spinner" /> : <Trash2 size={14} />}
             </button>
-            <button className="inline-action-btn inline-action-clear" onClick={onClearSelection} title="Clear selection">
+            <button className="inline-action-btn inline-action-clear" onClick={onClearSelection} disabled={selectedCount === 0} title="Clear selection">
                 <X size={14} />
             </button>
         </div>
@@ -394,7 +392,7 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose, o
     );
 };
 
-const DashboardRow: React.FC<DashboardRowProps> = ({
+const DashboardRow: React.FC<DashboardRowProps> = React.memo(({
     style,
     rowIndex,
     isSelected,
@@ -745,7 +743,7 @@ const DashboardRow: React.FC<DashboardRowProps> = ({
             </td>
         </tr>
     );
-};
+});
 
 // Skeleton row for loading state
 const SkeletonRow: React.FC = () => (
@@ -1062,9 +1060,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
 
     // Row selection handler with shift-select support
     const handleRowSelect = useCallback((id: string, shiftKey: boolean) => {
+        const currentIndex = sortedStyles.findIndex(s => s.id === id);
+
         setSelectedIds(prev => {
             const newSet = new Set(prev);
-            const currentIndex = sortedStyles.findIndex(s => s.id === id);
 
             if (shiftKey && lastSelectedIndex !== null && currentIndex !== -1) {
                 // Shift-select: select range
@@ -1083,7 +1082,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
             }
             return newSet;
         });
-        setLastSelectedIndex(sortedStyles.findIndex(s => s.id === id));
+        setLastSelectedIndex(currentIndex);
     }, [sortedStyles, lastSelectedIndex]);
 
     // Select/deselect all visible rows
@@ -1243,6 +1242,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                     </div>
                 )}
                 <div className="filter-bar">
+                    <InlineSelectionActions
+                        selectedCount={selectedIds.size}
+                        onClearSelection={clearSelection}
+                        onBulkDelete={handleBulkDelete}
+                        isDeleting={isBulkDeleting}
+                    />
                     <button
                         className="focus-mode-toggle"
                         onClick={toggleFocusMode}
@@ -1278,12 +1283,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                             </button>
                         )}
                     </div>
-                    <InlineSelectionActions
-                        selectedCount={selectedIds.size}
-                        onClearSelection={clearSelection}
-                        onBulkDelete={handleBulkDelete}
-                        isDeleting={isBulkDeleting}
-                    />
                     {(filterText || marginFilter) && (
                         <span className="filter-count">
                             Showing {sortedStyles.length} of {styles.length} rows
