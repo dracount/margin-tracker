@@ -1,15 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { StyleRecord } from '../hooks/useMarginCalculator';
 import { Download, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
+import { BUSINESS_CONSTANTS } from '../constants/business';
+import {
+    calculateLC,
+    calculateTotalCost,
+    calculateMargin,
+    calculateVal1,
+    calculateVal2,
+} from '../utils/marginCalculations';
+
+const { LOCALE: CURRENCY_LOCALE } = BUSINESS_CONSTANTS;
 
 interface ExportDataProps {
     styles: StyleRecord[];
     customerName: string;
 }
 
-// Helper function to calculate values for a single style
-const calculateStyleData = (style: StyleRecord) => {
+// Type for calculated style data
+interface CalculatedStyleData {
+    lc: number;
+    totalCost: number;
+    revenue: number;
+    profit: number;
+    marginAchieved: number;
+    profitPerPack: number;
+    val1: number;
+    val2: number;
+}
+
+// Export row type - values can be string (formatted) or number (raw)
+type ExportRow = Record<string, string | number>;
+
+// Format mode for export data
+type FormatMode = 'display' | 'numeric';
+
+// Helper function to calculate values for a single style using shared utilities
+const calculateStyleData = (style: StyleRecord): CalculatedStyleData => {
     const units = style.units || 0;
     const pack = style.pack || 1;
     const price = style.price || 0;
@@ -17,19 +45,18 @@ const calculateStyleData = (style: StyleRecord) => {
     const extraCost = style.extraCost || 0;
     const sellingPrice = style.sellingPrice || 0;
 
-    // LC = (Price * Rate) / 6.2
-    const lc = (price * rate) / 6.2;
-    const totalCost = lc + extraCost;
+    // Use shared calculation utilities
+    const lc = calculateLC(price, rate);
+    const totalCost = calculateTotalCost(lc, extraCost);
     const revenue = sellingPrice * units;
     const totalExpenses = totalCost * units;
     const profit = revenue - totalExpenses;
-    const marginAchieved = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const marginAchieved = calculateMargin(revenue, totalExpenses);
     // Profit per pack = Profit / Units (per unit, not multiplied by pack)
     const profitPerPack = units > 0 ? profit / units : 0;
-    // val1 = Price / 6.2
-    const val1 = price / 6.2;
-    // val2 = val1 / Pack
-    const val2 = pack > 0 ? val1 / pack : 0;
+    // Use shared calculation utilities
+    const val1 = calculateVal1(price);
+    const val2 = calculateVal2(val1, pack);
 
     return {
         lc,
@@ -43,14 +70,58 @@ const calculateStyleData = (style: StyleRecord) => {
     };
 };
 
-// Format number as currency with R prefix
-const formatCurrency = (value: number): string => {
-    return `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+// Build export row with formatting based on mode
+const buildExportRow = (
+    style: StyleRecord,
+    calc: CalculatedStyleData,
+    mode: FormatMode
+): ExportRow => {
+    // Format number to 2 decimal places
+    const formatNumber = (value: number): string | number => {
+        if (mode === 'numeric') {
+            return Math.round(value * 100) / 100;
+        }
+        return value.toFixed(2);
+    };
 
-// Format number as percentage
-const formatPercentage = (value: number): string => {
-    return `${value.toFixed(2)}%`;
+    // Format currency value
+    const formatCurrencyValue = (value: number): string | number => {
+        if (mode === 'numeric') {
+            return Math.round(value * 100) / 100;
+        }
+        return `R ${value.toLocaleString(CURRENCY_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    // Format percentage value
+    const formatPercentageValue = (value: number): string | number => {
+        if (mode === 'numeric') {
+            return Math.round(value * 100) / 100;
+        }
+        return `${value.toFixed(2)}%`;
+    };
+
+    return {
+        'Style ID': style.styleId,
+        'Factory': style.factory,
+        'Delivery Date': style.deliveryDate,
+        'Description': style.description,
+        'Fabric/Trim': style.fabricTrim || '',
+        'Type': style.type,
+        'Units': style.units,
+        'Pack': style.pack,
+        'Price (USD)': style.price,
+        'Rate': style.rate,
+        'Extra Cost (ZAR)': style.extraCost,
+        'Selling Price (ZAR)': style.sellingPrice,
+        'LC (ZAR)': formatCurrencyValue(calc.lc),
+        'Total Cost (ZAR)': formatCurrencyValue(calc.totalCost),
+        'Margin %': formatPercentageValue(calc.marginAchieved),
+        'Revenue (ZAR)': formatCurrencyValue(calc.revenue),
+        'Profit (ZAR)': formatCurrencyValue(calc.profit),
+        'Profit Per Pack (ZAR)': formatCurrencyValue(calc.profitPerPack),
+        'Val1': formatNumber(calc.val1),
+        'Val2': formatNumber(calc.val2)
+    };
 };
 
 // Get current date formatted for filename
@@ -68,61 +139,21 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
     const [isOpen, setIsOpen] = useState(false);
     const [exporting, setExporting] = useState(false);
 
-    const prepareExportData = () => {
+    // Prepare export data with display formatting (strings with currency symbols)
+    const prepareExportData = useCallback((): ExportRow[] => {
         return styles.map(style => {
             const calc = calculateStyleData(style);
-            return {
-                'Style ID': style.styleId,
-                'Factory': style.factory,
-                'Delivery Date': style.deliveryDate,
-                'Description': style.description,
-                'Fabric/Trim': style.fabricTrim || '',
-                'Type': style.type,
-                'Units': style.units,
-                'Pack': style.pack,
-                'Price (USD)': style.price,
-                'Rate': style.rate,
-                'Extra Cost (ZAR)': style.extraCost,
-                'Selling Price (ZAR)': style.sellingPrice,
-                'LC (ZAR)': formatCurrency(calc.lc),
-                'Total Cost (ZAR)': formatCurrency(calc.totalCost),
-                'Margin %': formatPercentage(calc.marginAchieved),
-                'Revenue (ZAR)': formatCurrency(calc.revenue),
-                'Profit (ZAR)': formatCurrency(calc.profit),
-                'Profit Per Pack (ZAR)': formatCurrency(calc.profitPerPack),
-                'Val1': calc.val1.toFixed(2),
-                'Val2': calc.val2.toFixed(2)
-            };
+            return buildExportRow(style, calc, 'display');
         });
-    };
+    }, [styles]);
 
-    const prepareNumericExportData = () => {
+    // Prepare export data with numeric values (for Excel calculations)
+    const prepareNumericExportData = useCallback((): ExportRow[] => {
         return styles.map(style => {
             const calc = calculateStyleData(style);
-            return {
-                'Style ID': style.styleId,
-                'Factory': style.factory,
-                'Delivery Date': style.deliveryDate,
-                'Description': style.description,
-                'Fabric/Trim': style.fabricTrim || '',
-                'Type': style.type,
-                'Units': style.units,
-                'Pack': style.pack,
-                'Price (USD)': style.price,
-                'Rate': style.rate,
-                'Extra Cost (ZAR)': style.extraCost,
-                'Selling Price (ZAR)': style.sellingPrice,
-                'LC (ZAR)': Math.round(calc.lc * 100) / 100,
-                'Total Cost (ZAR)': Math.round(calc.totalCost * 100) / 100,
-                'Margin %': Math.round(calc.marginAchieved * 100) / 100,
-                'Revenue (ZAR)': Math.round(calc.revenue * 100) / 100,
-                'Profit (ZAR)': Math.round(calc.profit * 100) / 100,
-                'Profit Per Pack (ZAR)': Math.round(calc.profitPerPack * 100) / 100,
-                'Val1': Math.round(calc.val1 * 100) / 100,
-                'Val2': Math.round(calc.val2 * 100) / 100
-            };
+            return buildExportRow(style, calc, 'numeric');
         });
-    };
+    }, [styles]);
 
     const exportToXLSX = () => {
         setExporting(true);
@@ -202,6 +233,9 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
                 className="btn-export"
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={exporting}
+                aria-haspopup="menu"
+                aria-expanded={isOpen}
+                aria-label="Export data"
                 style={{
                     background: 'rgba(255, 255, 255, 0.05)',
                     backdropFilter: 'blur(12px)',
@@ -225,9 +259,9 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                 }}
             >
-                <Download size={16} />
+                <Download size={16} aria-hidden="true" />
                 {exporting ? 'Exporting...' : 'Export'}
-                <ChevronDown size={14} style={{
+                <ChevronDown size={14} aria-hidden="true" style={{
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.2s ease'
                 }} />
@@ -236,6 +270,8 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
             {isOpen && (
                 <div
                     className="export-menu"
+                    role="menu"
+                    aria-label="Export format options"
                     style={{
                         position: 'absolute',
                         top: 'calc(100% + 0.5rem)',
@@ -253,6 +289,7 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
                 >
                     <button
                         onClick={exportToXLSX}
+                        role="menuitem"
                         style={{
                             width: '100%',
                             background: 'transparent',
@@ -275,7 +312,7 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
                             e.currentTarget.style.background = 'transparent';
                         }}
                     >
-                        <FileSpreadsheet size={18} style={{ color: '#10b981' }} />
+                        <FileSpreadsheet size={18} style={{ color: '#10b981' }} aria-hidden="true" />
                         <div>
                             <div style={{ fontWeight: 600 }}>Excel (.xlsx)</div>
                             <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Spreadsheet format</div>
@@ -283,6 +320,7 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
                     </button>
                     <button
                         onClick={exportToCSV}
+                        role="menuitem"
                         style={{
                             width: '100%',
                             background: 'transparent',
@@ -305,7 +343,7 @@ export const ExportData: React.FC<ExportDataProps> = ({ styles, customerName }) 
                             e.currentTarget.style.background = 'transparent';
                         }}
                     >
-                        <FileText size={18} style={{ color: '#f59e0b' }} />
+                        <FileText size={18} style={{ color: '#f59e0b' }} aria-hidden="true" />
                         <div>
                             <div style={{ fontWeight: 600 }}>CSV (.csv)</div>
                             <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Comma-separated</div>

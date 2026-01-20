@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import pb from '../lib/pocketbase';
 import type { AuthModel } from 'pocketbase';
 
@@ -56,25 +56,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
     }, []);
 
-    const login = async (email: string, password: string): Promise<void> => {
+    const login = useCallback(async (email: string, password: string): Promise<void> => {
         // Authenticate with PocketBase users collection
         const authData = await pb.collection('users').authWithPassword(email, password);
         setUser(authData.record);
-    };
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         // Clear the auth store (removes token from localStorage)
         pb.authStore.clear();
         setUser(null);
-    };
+    }, []);
 
-    const value: AuthContextType = {
+    const value = useMemo<AuthContextType>(() => ({
         user,
-        isAuthenticated: pb.authStore.isValid,
+        isAuthenticated: user !== null,
         isLoading,
         login,
         logout,
-    };
+    }), [user, isLoading, login, logout]);
 
     return (
         <AuthContext.Provider value={value}>

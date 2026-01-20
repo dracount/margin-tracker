@@ -96,3 +96,67 @@ Here is a comprehensive **Product Requirement Document (PRD) / Implementation Sh
     *   Undo/Redo stack (Ctrl+Z support) for the last 5 actions is a "Nice to Have" for Phase 2.
 3.  **Validation:**
     *
+This feature spec is a solid starting point, but according to our **ZMA (Zero-Maintenance Asset)** and **Choice Architecture** standards, it needs to be "re-shuffled." 
+
+Currently, your `free_tier` is too powerful (giving away all 50 states for free), and your `premium_tier` is a disorganized bucket. To maximize sales and hit the **$24.99 Target**, we need to map these features to the **Value Ladder.**
+
+Here is the enhanced ZMA Feature Specification:
+
+---
+
+### Revised ZMA Feature Spec: `tax_calculator_2025`
+
+#### 1. Tier: FREE (The "Aha!" Hook)
+*Goal: Provide immediate, high-quality "Aha!" moments without requiring a payment or internet.*
+
+*   **Federal Tax Engine (F001):** Full 2025 bracket support.
+*   **Standard Deduction (F002):** Automated for all filing statuses.
+*   **Visual Bracket Breakdown (F003):** (Moved from Gap) Educational visualization of how every dollar is taxed. **This is your "Wow" factor.**
+*   **Single State Preview (F004):** Allow the user to select **one** home state to calculate. (Gives them the "Proof of Concept").
+*   **Copy Result (F005):** Basic utility.
+
+#### 2. Tier: DECOY / PRO BASIC ($4.99 - "The Homeowner")
+*Goal: Remove the first layer of friction for users with slightly complex personal taxes.*
+
+*   **Itemized Deductions (P001):** Basic support for Mortgage Interest and Charitable Donations.
+*   **PDF Basic Export (P002):** A simple, clean summary of the federal/single-state result.
+*   **Ad-Free Experience (P003):** (Implicit in ZMA) But explicitly marketed here.
+
+#### 3. Tier: TARGET / EXPERT ($24.99 - "The Nomad & Professional")
+*Goal: The primary revenue driver. Targets high-value users who save hours by using this.*
+
+*   **50-State Unlock (P004):** (Moved from Free) Access to every state tax law for 2025. Crucial for nomads/remote workers.
+*   **Scenario Comparison (P005):** Side-by-side: "Married Joint vs. Separate." This is "Advisory" logic.
+*   **Self-Employment Engine (P006):** 1099/Freelancer tax and SE tax calculations.
+*   **Tax Credits Module (P007):** Child Tax Credit, EITC, and Education credits.
+*   **Professional PDF Report (P008):** Branded, detailed report suitable for sending to an accountant.
+
+#### 4. Tier: ANCHOR / CPA PACK ($49.99 - "The Small Business/Advisor")
+*Goal: Create a high price floor to make the $24.99 Expert tier look like a bargain.*
+
+*   **Multi-Profile Vault (P009):** Save, name, and manage up to 50 different tax profiles (Family members or Clients).
+*   **Audit Risk Indicator (P010):** Flag high-risk deduction ratios based on 2025 heuristics.
+*   **Unlimited Calculation History (P011):** Local database of every calculation ever performed.
+
+---
+
+### Structural Changes for "Zero-Maintenance"
+To ensure you never have to touch this app again:
+
+1.  **Hard-Coded Tables:**
+    *   The `federal_tax_calculation` and `state_tax_calculation` must **not** call an API. 
+    *   They must read from a local `tax_data_2025.json` bundled in the app.
+2.  **State Logic Gating:**
+    *   In the code, the `state_manager` should check the `entitlement`:
+        *   `if (free) { allowOnly(selected_state_id); }`
+        *   `if (expert) { allowAll(); }`
+3.  **Local Persistence:**
+    *   `Multi-Profile Vault` uses a local SQLite table. No "Cloud Login" allowed. This prevents server costs and maintenance.
+
+### Why this results in "Most Sales":
+*   **The Free Tier** is better than the competition because it has the **Visual Breakdown** (educational value).
+*   **The $4.99 Decoy** exists only to make people realize they have "Itemized Deductions" and should probably just get the **$24.99 Expert** version.
+*   **The $24.99 Target** is where 70% of your revenue will come from. By gating **"All 50 States"** here, you capture the high-intent "Tax Season" traffic.
+*   **The $49.99 Anchor** ensures that when a user sees $24.99, they don't think "expensive," they think "half price."
+
+**Does this mapping look correct for your "ZMA" Factory? If yes, I will trigger the Architect to generate the technical file schema for the 50-state JSON.**

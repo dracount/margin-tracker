@@ -8,11 +8,22 @@ import PocketBase from 'pocketbase';
 import fs from 'fs';
 import path from 'path';
 
-const pb = new PocketBase('http://localhost:8090');
+const pb = new PocketBase(process.env.POCKETBASE_URL || 'http://localhost:8090');
 
-// Admin credentials
-const ADMIN_EMAIL = 'admin@admin.com';
-const ADMIN_PASSWORD = 'password';
+// Admin credentials from environment variables
+const ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD;
+
+/**
+ * Escape special characters in a value for use in PocketBase filter queries
+ * @param {string} value - The value to escape
+ * @returns {string} - The escaped value
+ */
+function escapeFilterValue(value) {
+    if (!value) return '';
+    // Escape backslashes first, then double quotes
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
 
 // Customer details
 const CUSTOMER_NAME = 'PEEP & HEY BETTY';
@@ -39,6 +50,12 @@ async function importCSV(csvPath) {
 
     console.log(`📊 Found ${lines.length} lines\n`);
 
+    // Check for required credentials
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+        console.error('❌ Error: PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD environment variables must be set');
+        process.exit(1);
+    }
+
     // Authenticate as admin
     console.log('🔐 Authenticating as admin...');
     try {
@@ -53,7 +70,7 @@ async function importCSV(csvPath) {
     console.log('👤 Getting customer...');
     let customerId;
     try {
-        const existing = await pb.collection('customers').getFirstListItem(`customer_id="${CUSTOMER_ID}"`);
+        const existing = await pb.collection('customers').getFirstListItem(`customer_id="${escapeFilterValue(CUSTOMER_ID)}"`);
         customerId = existing.id;
         console.log(`ℹ️  Using existing customer ID: ${customerId}\n`);
     } catch (err) {
@@ -112,7 +129,7 @@ async function importCSV(csvPath) {
         try {
             // Check if style already exists
             try {
-                const existing = await pb.collection('styles').getFirstListItem(`styleId="${styleId}" && customer="${customerId}"`);
+                const existing = await pb.collection('styles').getFirstListItem(`styleId="${escapeFilterValue(styleId)}" && customer="${customerId}"`);
                 // Update existing
                 await pb.collection('styles').update(existing.id, style);
                 console.log(`🔄 Updated: ${styleId}`);

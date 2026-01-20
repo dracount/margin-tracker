@@ -4,8 +4,28 @@
 
 import PocketBase from 'pocketbase';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const pb = new PocketBase('http://localhost:8090');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const pb = new PocketBase(process.env.POCKETBASE_URL || 'http://localhost:8090');
+
+// Admin credentials from environment variables
+const ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD;
+
+/**
+ * Escape special characters in a value for use in PocketBase filter queries
+ * @param {string} value - The value to escape
+ * @returns {string} - The escaped value
+ */
+function escapeFilterValue(value) {
+    if (!value) return '';
+    // Escape backslashes first, then double quotes
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
 
 // Parse number from various formats (handles commas, R prefix, spaces)
 function parseNum(val) {
@@ -19,8 +39,13 @@ function parseNum(val) {
 async function importData() {
     console.log('🚀 Starting import...\n');
 
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+        console.error('Error: PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD environment variables must be set');
+        process.exit(1);
+    }
+
     // Auth as admin
-    await pb.collection('_superusers').authWithPassword('admin@admin.com', 'password');
+    await pb.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
     console.log('✅ Authenticated as admin\n');
 
     // Create customer
@@ -37,12 +62,12 @@ async function importData() {
         if (err.message?.includes('already exists') || err.data?.name?.message?.includes('already exists')) {
             console.log('ℹ️  Customer might exist, fetching...');
             try {
-                const existing = await pb.collection('customers').getFirstListItem('customer_id="PHB001"');
+                const existing = await pb.collection('customers').getFirstListItem(`customer_id="${escapeFilterValue('PHB001')}"`);
                 customerId = existing.id;
                 console.log(`ℹ️  Using existing customer ID: ${customerId}\n`);
             } catch (e) {
                 // Try by name
-                const existing = await pb.collection('customers').getFirstListItem('name="PEEP & HEY BETTY"');
+                const existing = await pb.collection('customers').getFirstListItem(`name="${escapeFilterValue('PEEP & HEY BETTY')}"`);
                 customerId = existing.id;
                 console.log(`ℹ️  Using existing customer ID: ${customerId}\n`);
             }
@@ -53,7 +78,7 @@ async function importData() {
 
     // Read and parse CSV
     console.log('📄 Reading CSV file...');
-    const csvPath = '/home/david/michael/Margin_Tracker/uploads/1.csv';
+    const csvPath = path.join(__dirname, '..', 'uploads', '1.csv');
     const content = fs.readFileSync(csvPath, 'utf-8');
     const lines = content.split('\n');
 

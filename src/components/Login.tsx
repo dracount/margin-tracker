@@ -53,7 +53,7 @@ export const Login: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="login-form">
                     {error && (
-                        <div className="login-error">
+                        <div className="login-error" role="alert" aria-live="polite" id="login-error">
                             {error}
                         </div>
                     )}
@@ -69,6 +69,8 @@ export const Login: React.FC = () => {
                             required
                             disabled={isLoading}
                             autoComplete="email"
+                            aria-invalid={error ? 'true' : 'false'}
+                            aria-describedby={error ? 'login-error' : undefined}
                         />
                     </div>
 
@@ -83,6 +85,8 @@ export const Login: React.FC = () => {
                             required
                             disabled={isLoading}
                             autoComplete="current-password"
+                            aria-invalid={error ? 'true' : 'false'}
+                            aria-describedby={error ? 'login-error' : undefined}
                         />
                     </div>
 
@@ -93,7 +97,7 @@ export const Login: React.FC = () => {
                     >
                         {isLoading ? (
                             <span className="login-loading">
-                                <span className="spinner"></span>
+                                <span className="spinner" aria-label="Signing in" role="status"></span>
                                 Signing in...
                             </span>
                         ) : (

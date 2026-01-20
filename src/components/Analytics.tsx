@@ -10,23 +10,30 @@ import {
     Maximize2
 } from 'lucide-react';
 import { StyleRecord } from '../hooks/useMarginCalculator';
+import { BUSINESS_CONSTANTS } from '../constants/business';
+import { calculateStyleMetrics as calcStyleMetrics } from '../utils/marginCalculations';
 
-// Shared calculation function
+const { MARGIN_THRESHOLDS, LOCALE, CURRENCY } = BUSINESS_CONSTANTS;
+
+// Shared calculation function using centralized utilities
 const calculateStyleMetrics = (style: StyleRecord) => {
     const units = style.units || 0;
     const price = style.price || 0;
     const rate = style.rate || 0;
     const extraCost = style.extraCost || 0;
     const sellingPrice = style.sellingPrice || 0;
+    const pack = style.pack || 1;
 
-    const lc = (price * rate) / 6.2;
-    const totalCost = lc + extraCost;
-    const revenue = sellingPrice * units;
-    const totalExpenses = totalCost * units;
-    const profit = revenue - totalExpenses;
-    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const metrics = calcStyleMetrics({
+        price,
+        rate,
+        extraCost,
+        sellingPrice,
+        units,
+        pack
+    });
 
-    return { revenue, profit, margin, units };
+    return { revenue: metrics.revenue, profit: metrics.profit, margin: metrics.margin, units };
 };
 
 // Shared analytics calculation hook
@@ -54,10 +61,10 @@ const useAnalyticsData = (styles: StyleRecord[]) => {
 
             if (metrics.margin < 0) {
                 marginBrackets.negative++;
-            } else if (metrics.margin < 15) {
+            } else if (metrics.margin < MARGIN_THRESHOLDS.LOW) {
                 marginBrackets.low++;
                 belowTarget++;
-            } else if (metrics.margin < 22) {
+            } else if (metrics.margin < MARGIN_THRESHOLDS.MEDIUM) {
                 marginBrackets.medium++;
                 atRisk++;
             } else if (metrics.margin < 30) {
@@ -91,18 +98,18 @@ const formatCurrency = (value: number) => {
     if (Math.abs(value) >= 1000) {
         return `R${(value / 1000).toFixed(0)}K`;
     }
-    return value.toLocaleString('en-ZA', {
+    return value.toLocaleString(LOCALE, {
         style: 'currency',
-        currency: 'ZAR',
+        currency: CURRENCY,
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     });
 };
 
 const formatCurrencyFull = (value: number) => {
-    return value.toLocaleString('en-ZA', {
+    return value.toLocaleString(LOCALE, {
         style: 'currency',
-        currency: 'ZAR',
+        currency: CURRENCY,
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     });
@@ -137,7 +144,7 @@ export const TickerTape: React.FC<TickerTapeProps> = ({ styles }) => {
             <div className="ticker-item">
                 <Percent size={14} />
                 <span className="ticker-label">Margin:</span>
-                <span className={`ticker-value ${analytics.weightedAvgMargin >= 22 ? 'positive' : analytics.weightedAvgMargin >= 15 ? 'warning' : 'negative'}`}>
+                <span className={`ticker-value ${analytics.weightedAvgMargin >= MARGIN_THRESHOLDS.MEDIUM ? 'positive' : analytics.weightedAvgMargin >= MARGIN_THRESHOLDS.LOW ? 'warning' : 'negative'}`}>
                     {analytics.weightedAvgMargin.toFixed(1)}%
                 </span>
             </div>
@@ -219,7 +226,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFi
             label: 'Average Margin',
             value: `${analytics.weightedAvgMargin.toFixed(1)}%`,
             icon: <Percent size={24} />,
-            color: analytics.weightedAvgMargin >= 22 ? 'green' : analytics.weightedAvgMargin >= 15 ? 'gold' : 'red'
+            color: analytics.weightedAvgMargin >= MARGIN_THRESHOLDS.MEDIUM ? 'green' : analytics.weightedAvgMargin >= MARGIN_THRESHOLDS.LOW ? 'gold' : 'red'
         },
         {
             label: 'Total Units',
@@ -232,14 +239,14 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFi
             value: analytics.belowTarget.toString(),
             icon: <AlertTriangle size={24} />,
             color: analytics.belowTarget > 0 ? 'red' : 'green',
-            subtext: 'Margin < 15%'
+            subtext: `Margin < ${MARGIN_THRESHOLDS.LOW}%`
         },
         {
             label: 'At Risk',
             value: analytics.atRisk.toString(),
             icon: <AlertCircle size={24} />,
             color: analytics.atRisk > 0 ? 'gold' : 'green',
-            subtext: 'Margin 15-22%'
+            subtext: `Margin ${MARGIN_THRESHOLDS.LOW}-${MARGIN_THRESHOLDS.MEDIUM}%`
         }
     ];
 
@@ -252,21 +259,21 @@ export const Analytics: React.FC<AnalyticsProps> = ({ styles, activeFilter, onFi
             filterKey: 'negative'
         },
         {
-            label: '< 15%',
+            label: `< ${MARGIN_THRESHOLDS.LOW}%`,
             count: analytics.marginBrackets.low,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.low / analytics.totalItems) * 100 : 0,
             color: '#f87171',
             filterKey: 'low'
         },
         {
-            label: '15-22%',
+            label: `${MARGIN_THRESHOLDS.LOW}-${MARGIN_THRESHOLDS.MEDIUM}%`,
             count: analytics.marginBrackets.medium,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.medium / analytics.totalItems) * 100 : 0,
             color: 'var(--gold)',
             filterKey: 'medium'
         },
         {
-            label: '22-30%',
+            label: `${MARGIN_THRESHOLDS.MEDIUM}-30%`,
             count: analytics.marginBrackets.good,
             percentage: analytics.totalItems > 0 ? (analytics.marginBrackets.good / analytics.totalItems) * 100 : 0,
             color: '#4ade80',

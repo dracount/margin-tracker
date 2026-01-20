@@ -303,10 +303,10 @@ export const ImportData: React.FC<ImportDataProps> = ({ customerId, onClose, onI
 
     return (
         <div className="import-overlay">
-            <div className="import-modal">
+            <div className="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
                 <div className="import-header">
-                    <h2>Import Data from Excel</h2>
-                    <button className="btn-close" onClick={onClose}>&times;</button>
+                    <h2 id="import-modal-title">Import Data from Excel</h2>
+                    <button className="btn-close" onClick={onClose} aria-label="Close import dialog">&times;</button>
                 </div>
 
                 {!previewData.length && (
@@ -335,16 +335,18 @@ export const ImportData: React.FC<ImportDataProps> = ({ customerId, onClose, onI
                                 accept=".xlsx,.xls,.csv"
                                 onChange={handleFileSelect}
                                 style={{ display: 'none' }}
+                                id="file-upload-input"
+                                aria-describedby="file-upload-description"
                             />
                             <div className="drop-zone-content">
                                 <div className="drop-icon">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                         <polyline points="17 8 12 3 7 8" />
                                         <line x1="12" y1="3" x2="12" y2="15" />
                                     </svg>
                                 </div>
-                                <p>Drag and drop your Excel or CSV file here</p>
+                                <p id="file-upload-description">Drag and drop your Excel or CSV file here</p>
                                 <p className="drop-hint">or click to browse</p>
                             </div>
                         </div>
@@ -395,7 +397,7 @@ export const ImportData: React.FC<ImportDataProps> = ({ customerId, onClose, onI
                                 </thead>
                                 <tbody>
                                     {previewData.slice(0, 50).map((row, index) => (
-                                        <tr key={index}>
+                                        <tr key={`${row.styleId}-${index}`}>
                                             <td>{row.styleId}</td>
                                             <td>{row.factory}</td>
                                             <td>{row.deliveryDate}</td>
@@ -413,6 +415,7 @@ export const ImportData: React.FC<ImportDataProps> = ({ customerId, onClose, onI
                                                     className="btn-remove"
                                                     onClick={() => handleRemoveRow(index)}
                                                     title="Remove row"
+                                                    aria-label={`Remove row ${index + 1}`}
                                                 >
                                                     &times;
                                                 </button>

@@ -4,11 +4,20 @@
 
 import PocketBase from 'pocketbase';
 
-const pb = new PocketBase('http://localhost:8090');
+const pb = new PocketBase(process.env.POCKETBASE_URL || 'http://localhost:8090');
+
+// Admin credentials from environment variables
+const ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD;
 
 async function check() {
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+        console.error('Error: PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD environment variables must be set');
+        process.exit(1);
+    }
+
     // Auth as admin
-    await pb.collection('_superusers').authWithPassword('admin@admin.com', 'password');
+    await pb.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
 
     // Get customers collection schema
     console.log('📋 Customers Collection Schema:\n');

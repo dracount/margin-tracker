@@ -2,7 +2,7 @@ import PocketBase from 'pocketbase';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const pb = new PocketBase('http://127.0.0.1:8090');
+const pb = new PocketBase(process.env.POCKETBASE_URL || 'http://localhost:8090');
 
 // Column mapping from CSV headers to schema
 const COLUMN_MAP: Record<string, string> = {

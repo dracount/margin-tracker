@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Maximize2, Minimize2, Trash2, X, Info, Settings, Eye, EyeOff } from 'lucide-react';
 import pb from '../lib/pocketbase';
 import { StyleRecord, useMarginCalculator } from '../hooks/useMarginCalculator';
@@ -6,6 +6,10 @@ import { useDebounce } from '../hooks/useDebounce';
 import { Analytics, TickerTape } from './Analytics';
 import { useToast } from './Toast';
 import { validateField, getApiErrorMessage, withRetry } from '../utils/validation';
+import { BUSINESS_CONSTANTS } from '../constants/business';
+import { calculateLC, calculateTotalCost, calculateMargin as calcMarginUtil } from '../utils/marginCalculations';
+
+const { MARGIN_THRESHOLDS } = BUSINESS_CONSTANTS;
 
 interface DashboardProps {
     customerId: string;
@@ -45,6 +49,14 @@ interface FieldErrors {
 // Editable field columns for keyboard navigation
 const EDITABLE_FIELDS = ['fabricTrim', 'units', 'price', 'rate', 'extraCost', 'sellingPrice'] as const;
 
+// Shallow comparison helper to avoid JSON.stringify overhead
+const hasStyleChanged = (a: StyleRecord | null, b: StyleRecord | null): boolean => {
+    if (a === b) return false;
+    if (!a || !b) return true;
+    const keys: (keyof StyleRecord)[] = ['price', 'rate', 'units', 'pack', 'extraCost', 'sellingPrice', 'description', 'factory', 'deliveryDate', 'fabricTrim', 'styleId', 'type'];
+    return keys.some(key => a[key] !== b[key]);
+};
+
 interface DashboardRowProps {
     style: StyleRecord;
     rowIndex: number;
@@ -72,11 +84,11 @@ const InlineSelectionActions: React.FC<InlineSelectionActionsProps> = ({ selecte
     return (
         <div className={`inline-selection-actions ${selectedCount === 0 ? 'hidden' : ''}`}>
             <span className="selection-count">{selectedCount} selected</span>
-            <button className="inline-action-btn inline-action-delete" onClick={onBulkDelete} disabled={isDeleting || selectedCount === 0} title="Delete selected rows">
-                {isDeleting ? <span className="mini-spinner" /> : <Trash2 size={14} />}
+            <button className="inline-action-btn inline-action-delete" onClick={onBulkDelete} disabled={isDeleting || selectedCount === 0} title="Delete selected rows" aria-label="Delete selected rows">
+                {isDeleting ? <span className="mini-spinner" aria-label="Deleting" role="status" /> : <Trash2 size={14} aria-hidden="true" />}
             </button>
-            <button className="inline-action-btn inline-action-clear" onClick={onClearSelection} disabled={selectedCount === 0} title="Clear selection">
-                <X size={14} />
+            <button className="inline-action-btn inline-action-clear" onClick={onClearSelection} disabled={selectedCount === 0} title="Clear selection" aria-label="Clear selection">
+                <X size={14} aria-hidden="true" />
             </button>
         </div>
     );
@@ -110,8 +122,11 @@ const ColumnSettings: React.FC<ColumnSettingsProps> = ({ hiddenColumns, onToggle
                 className={`column-settings-btn ${isOpen ? 'active' : ''}`}
                 onClick={onToggle}
                 title="Column visibility"
+                aria-label="Column visibility settings"
+                aria-expanded={isOpen}
+                aria-haspopup="true"
             >
-                <Settings size={18} />
+                <Settings size={18} aria-hidden="true" />
             </button>
             {isOpen && (
                 <div className="column-settings-dropdown">
@@ -226,8 +241,8 @@ const ContextDrawer: React.FC<ContextDrawerProps> = ({ style, isOpen, onClose, o
                         <Info size={20} />
                         Style Details
                     </div>
-                    <button className="context-drawer-close" onClick={onClose} title="Close (Esc)">
-                        <X size={20} />
+                    <button className="context-drawer-close" onClick={onClose} title="Close (Esc)" aria-label="Close drawer">
+                        <X size={20} aria-hidden="true" />
                     </button>
                 </div>
                 <div className="context-drawer-content">
@@ -434,7 +449,7 @@ const DashboardRow: React.FC<DashboardRowProps> = React.memo(({
     // Sync with external updates (from real-time subscription)
     useEffect(() => {
         // Only update if the external style changed and we don't have unsaved changes
-        if (JSON.stringify(style) !== JSON.stringify(previousStyleRef.current)) {
+        if (hasStyleChanged(style, previousStyleRef.current)) {
             if (!hasUnsavedChanges) {
                 setLocalStyle(style);
                 setErrors({});
@@ -459,7 +474,7 @@ const DashboardRow: React.FC<DashboardRowProps> = React.memo(({
     // Auto-save when debounced value changes (only if validation passes)
     useEffect(() => {
         const performSave = async () => {
-            if (JSON.stringify(debouncedStyle) !== JSON.stringify(style) && hasUnsavedChanges) {
+            if (hasStyleChanged(debouncedStyle, style) && hasUnsavedChanges) {
                 // Check validation before saving
                 if (hasValidationErrors()) {
                     setSaveStatus('error');
@@ -643,8 +658,8 @@ const DashboardRow: React.FC<DashboardRowProps> = React.memo(({
     // Get margin status class for status pillar
     const getMarginStatusClass = () => {
         const marginNum = parseFloat(calculated.margin);
-        if (marginNum < 15) return 'status-critical';
-        if (marginNum < 22) return 'status-warning';
+        if (marginNum < MARGIN_THRESHOLDS.LOW) return 'status-critical';
+        if (marginNum < MARGIN_THRESHOLDS.MEDIUM) return 'status-warning';
         if (marginNum >= 30) return 'status-excellent';
         return 'status-good';
     };
@@ -730,11 +745,12 @@ const DashboardRow: React.FC<DashboardRowProps> = React.memo(({
                     onClick={handleDelete}
                     disabled={isDeleting}
                     title="Delete row"
+                    aria-label="Delete row"
                 >
                     {isDeleting ? (
-                        <span className="mini-spinner" />
+                        <span className="mini-spinner" aria-label="Deleting" role="status" />
                     ) : (
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
@@ -989,29 +1005,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
         }
     }, [sortColumn]);
 
-    // Helper to calculate margin for a style
-    const calculateMargin = useCallback((style: StyleRecord) => {
-        const lc = (style.price * style.rate) / 6.2;
-        const totalCost = lc + style.extraCost;
-        return style.sellingPrice > 0
-            ? ((style.sellingPrice - totalCost) / style.sellingPrice) * 100
-            : 0;
+    // Get aria-sort value for a column
+    const getAriaSort = useCallback((column: SortColumn): 'ascending' | 'descending' | 'none' => {
+        if (sortColumn !== column) return 'none';
+        return sortDirection === 'asc' ? 'ascending' : 'descending';
+    }, [sortColumn, sortDirection]);
+
+    // Helper to calculate margin for a style using shared utilities
+    const calculateMarginForStyle = useCallback((style: StyleRecord) => {
+        const lc = calculateLC(style.price, style.rate);
+        const totalCost = calculateTotalCost(lc, style.extraCost);
+        const revenue = style.sellingPrice * style.units;
+        const cost = totalCost * style.units;
+        return calcMarginUtil(revenue, cost);
     }, []);
+
+    // Memoize lowercase search term to avoid repeated toLowerCase() calls
+    const lowerSearchText = useMemo(() => filterText.toLowerCase().trim(), [filterText]);
 
     // Filter styles based on search text and margin filter
     const filteredStyles = React.useMemo(() => {
         let result = styles;
 
         // Apply text filter
-        if (filterText.trim()) {
-            const searchLower = filterText.toLowerCase().trim();
+        if (lowerSearchText) {
             result = result.filter(style => {
                 return (
-                    style.styleId?.toLowerCase().includes(searchLower) ||
-                    style.factory?.toLowerCase().includes(searchLower) ||
-                    style.description?.toLowerCase().includes(searchLower) ||
-                    style.fabricTrim?.toLowerCase().includes(searchLower) ||
-                    style.type?.toLowerCase().includes(searchLower)
+                    style.styleId?.toLowerCase().includes(lowerSearchText) ||
+                    style.factory?.toLowerCase().includes(lowerSearchText) ||
+                    style.description?.toLowerCase().includes(lowerSearchText) ||
+                    style.fabricTrim?.toLowerCase().includes(lowerSearchText) ||
+                    style.type?.toLowerCase().includes(lowerSearchText)
                 );
             });
         }
@@ -1019,12 +1043,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
         // Apply margin filter from chart interaction
         if (marginFilter) {
             result = result.filter(style => {
-                const margin = calculateMargin(style);
+                const margin = calculateMarginForStyle(style);
                 switch (marginFilter) {
                     case 'negative': return margin < 0;
-                    case 'low': return margin >= 0 && margin < 15;
-                    case 'medium': return margin >= 15 && margin < 22;
-                    case 'good': return margin >= 22 && margin < 30;
+                    case 'low': return margin >= 0 && margin < MARGIN_THRESHOLDS.LOW;
+                    case 'medium': return margin >= MARGIN_THRESHOLDS.LOW && margin < MARGIN_THRESHOLDS.MEDIUM;
+                    case 'good': return margin >= MARGIN_THRESHOLDS.MEDIUM && margin < 30;
                     case 'excellent': return margin >= 30;
                     default: return true;
                 }
@@ -1032,7 +1056,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
         }
 
         return result;
-    }, [styles, filterText, marginFilter, calculateMargin]);
+    }, [styles, lowerSearchText, marginFilter, calculateMarginForStyle]);
 
     // Calculate max units for sparklines
     const maxUnits = React.useMemo(() => {
@@ -1312,75 +1336,75 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
                                         title="Select all"
                                     />
                                 </th>
-                                <th className="sortable-header sticky-col-style" onClick={() => handleSort('styleId')}>
-                                    Style # {sortColumn === 'styleId' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header sticky-col-style" onClick={() => handleSort('styleId')} aria-sort={getAriaSort('styleId')}>
+                                    Style # {sortColumn === 'styleId' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
                                 {isColumnVisible('factory') && (
-                                    <th className="sortable-header" onClick={() => handleSort('factory')}>
-                                        Factory {sortColumn === 'factory' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('factory')} aria-sort={getAriaSort('factory')}>
+                                        Factory {sortColumn === 'factory' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 {isColumnVisible('description') && (
-                                    <th className="sortable-header" onClick={() => handleSort('description')}>
-                                        Description {sortColumn === 'description' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('description')} aria-sort={getAriaSort('description')}>
+                                        Description {sortColumn === 'description' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 {isColumnVisible('fabricTrim') && (
-                                    <th className="sortable-header" onClick={() => handleSort('fabricTrim')}>
-                                        Fabric/Trim {sortColumn === 'fabricTrim' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('fabricTrim')} aria-sort={getAriaSort('fabricTrim')}>
+                                        Fabric/Trim {sortColumn === 'fabricTrim' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
-                                <th className="sortable-header" onClick={() => handleSort('units')}>
-                                    Units {sortColumn === 'units' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header" onClick={() => handleSort('units')} aria-sort={getAriaSort('units')}>
+                                    Units {sortColumn === 'units' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
                                 {isColumnVisible('pack') && (
-                                    <th className="sortable-header" onClick={() => handleSort('pack')}>
-                                        Pack {sortColumn === 'pack' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('pack')} aria-sort={getAriaSort('pack')}>
+                                        Pack {sortColumn === 'pack' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
-                                <th className="sortable-header" onClick={() => handleSort('price')}>
-                                    Price {sortColumn === 'price' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header" onClick={() => handleSort('price')} aria-sort={getAriaSort('price')}>
+                                    Price {sortColumn === 'price' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
                                 {isColumnVisible('rate') && (
-                                    <th className="sortable-header" onClick={() => handleSort('rate')}>
-                                        Rate {sortColumn === 'rate' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('rate')} aria-sort={getAriaSort('rate')}>
+                                        Rate {sortColumn === 'rate' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 {isColumnVisible('lc') && (
-                                    <th className="sortable-header" onClick={() => handleSort('lc')}>
-                                        LC (ZAR) {sortColumn === 'lc' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('lc')} aria-sort={getAriaSort('lc')}>
+                                        LC (ZAR) {sortColumn === 'lc' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 {isColumnVisible('extraCost') && (
-                                    <th className="sortable-header" onClick={() => handleSort('extraCost')}>
-                                        Extra (ZAR) {sortColumn === 'extraCost' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('extraCost')} aria-sort={getAriaSort('extraCost')}>
+                                        Extra (ZAR) {sortColumn === 'extraCost' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
-                                <th className="sortable-header" onClick={() => handleSort('totalCost')}>
-                                    Total Cost {sortColumn === 'totalCost' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header" onClick={() => handleSort('totalCost')} aria-sort={getAriaSort('totalCost')}>
+                                    Total Cost {sortColumn === 'totalCost' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
-                                <th className="sortable-header" onClick={() => handleSort('sellingPrice')}>
-                                    Selling (ZAR) {sortColumn === 'sellingPrice' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header" onClick={() => handleSort('sellingPrice')} aria-sort={getAriaSort('sellingPrice')}>
+                                    Selling (ZAR) {sortColumn === 'sellingPrice' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
-                                <th className="sortable-header" onClick={() => handleSort('margin')}>
-                                    Margin {sortColumn === 'margin' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header" onClick={() => handleSort('margin')} aria-sort={getAriaSort('margin')}>
+                                    Margin {sortColumn === 'margin' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
-                                <th className="sortable-header" onClick={() => handleSort('profit')}>
-                                    Profit {sortColumn === 'profit' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                <th className="sortable-header" onClick={() => handleSort('profit')} aria-sort={getAriaSort('profit')}>
+                                    Profit {sortColumn === 'profit' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                 </th>
                                 {isColumnVisible('profitPerPack') && (
-                                    <th className="sortable-header" onClick={() => handleSort('profitPerPack')}>
-                                        Profit/Pack {sortColumn === 'profitPerPack' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('profitPerPack')} aria-sort={getAriaSort('profitPerPack')}>
+                                        Profit/Pack {sortColumn === 'profitPerPack' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 {isColumnVisible('val1') && (
-                                    <th className="sortable-header" onClick={() => handleSort('val1')}>
-                                        Val1 {sortColumn === 'val1' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('val1')} aria-sort={getAriaSort('val1')}>
+                                        Val1 {sortColumn === 'val1' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 {isColumnVisible('val2') && (
-                                    <th className="sortable-header" onClick={() => handleSort('val2')}>
-                                        Val2 {sortColumn === 'val2' && <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+                                    <th className="sortable-header" onClick={() => handleSort('val2')} aria-sort={getAriaSort('val2')}>
+                                        Val2 {sortColumn === 'val2' && <span className="sort-indicator" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
                                     </th>
                                 )}
                                 <th></th>

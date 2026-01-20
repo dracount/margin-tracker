@@ -11,14 +11,20 @@
 
 import PocketBase from 'pocketbase';
 
-const pb = new PocketBase('http://localhost:8090');
+const pb = new PocketBase(process.env.POCKETBASE_URL || 'http://localhost:8090');
 
-// Admin credentials - update these
-const ADMIN_EMAIL = 'admin@admin.com';
-const ADMIN_PASSWORD = 'password';
+// Admin credentials from environment variables
+const ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD;
 
 async function seed() {
     console.log('🌱 Starting database seed...\n');
+
+    // Check for required credentials
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+        console.error('❌ Error: PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD environment variables must be set');
+        process.exit(1);
+    }
 
     // Authenticate as admin
     console.log('🔐 Authenticating as admin...');
@@ -28,8 +34,8 @@ async function seed() {
     } catch (err) {
         console.error('❌ Failed to authenticate:', err.message);
         console.log('\nMake sure:');
-        console.log('1. PocketBase is running at http://localhost:8090');
-        console.log('2. Admin credentials are correct');
+        console.log(`1. PocketBase is running at ${process.env.POCKETBASE_URL || 'http://localhost:8090'}`);
+        console.log('2. PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD environment variables are correct');
         process.exit(1);
     }
 

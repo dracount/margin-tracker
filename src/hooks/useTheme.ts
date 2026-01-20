@@ -25,6 +25,8 @@ export function useTheme() {
 
     // Apply theme class to body
     useEffect(() => {
+        if (typeof document === 'undefined') return;
+
         const body = document.body;
         if (theme === 'light') {
             body.classList.add('light-mode');
@@ -37,6 +39,8 @@ export function useTheme() {
 
     // Listen for system theme changes
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
         const handleChange = (e: MediaQueryListEvent) => {
             // Only auto-switch if user hasn't explicitly set a preference

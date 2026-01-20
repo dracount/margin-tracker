@@ -1,3 +1,11 @@
+import {
+    calculateLC,
+    calculateTotalCost,
+    calculateMargin,
+    calculateVal1,
+    calculateVal2,
+} from './marginCalculations';
+
 export interface LineItem {
     id: string;
     styleId: string;
@@ -45,15 +53,15 @@ export interface CalculatedValues {
  */
 export const calculateRow = (item: LineItem, sellingPrice: number): CalculatedValues => {
     // 1. Landed Cost (LC)
-    // Formula: LC = (Price * Rate) / 6.2
+    // Formula: LC = (Price * Rate) / CURRENCY_DIVISOR
     // Verified: 13.95 * 42 / 6.2 = 94.50
     // Verified: 13.33 * 46 / 6.2 = 98.90
-    const lc = (item.price * item.rate) / 6.2;
+    const lc = calculateLC(item.price, item.rate);
 
     // 2. Total Cost (per unit)
     // Formula: Total Cost = LC + Extra Cost
     // Verified: 94.50 + 23.00 = 117.50
-    const totalCost = lc + item.extraCost;
+    const totalCost = calculateTotalCost(lc, item.extraCost);
 
     const actualSellingPrice = sellingPrice;
 
@@ -75,9 +83,7 @@ export const calculateRow = (item: LineItem, sellingPrice: number): CalculatedVa
     // 6. Margin Achieved (percentage)
     // Formula: Margin = (Profit / Revenue) * 100
     // Verified: (18,000 / 194,250) * 100 = 9.27%
-    const marginAchieved = revenue > 0
-        ? (profit / revenue) * 100
-        : 0;
+    const marginAchieved = calculateMargin(revenue, cost);
 
     // 7. Profit Per Pack (actually profit per unit based on sample data)
     // Formula: Profit Per Pack = Profit / Units
@@ -86,14 +92,14 @@ export const calculateRow = (item: LineItem, sellingPrice: number): CalculatedVa
     const profitPerPack = item.units > 0 ? profit / item.units : 0;
 
     // 8. Column1 (val1)
-    // Formula: val1 = Price / 6.2
+    // Formula: val1 = Price / CURRENCY_DIVISOR
     // Verified: 13.95 / 6.2 = 2.25
-    const val1 = item.price / 6.2;
+    const val1 = calculateVal1(item.price);
 
     // 9. Column2 (val2)
     // Formula: val2 = val1 / Pack
     // Verified: 2.25 / 2 = 1.13 (rounded from 1.125)
-    const val2 = item.pack > 0 ? val1 / item.pack : 0;
+    const val2 = calculateVal2(val1, item.pack);
 
     return {
         lc,

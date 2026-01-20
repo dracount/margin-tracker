@@ -5,7 +5,11 @@
 
 import PocketBase from 'pocketbase';
 
-const pb = new PocketBase('http://localhost:8090');
+const pb = new PocketBase(process.env.POCKETBASE_URL || 'http://localhost:8090');
+
+// Admin credentials from environment variables
+const ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD;
 
 async function diagnose() {
     console.log('🔍 PocketBase Diagnostic Report\n');
@@ -18,32 +22,27 @@ async function diagnose() {
         console.log('   ✅ PocketBase is running\n');
     } catch (err) {
         console.error('   ❌ Cannot connect to PocketBase:', err.message);
-        console.log('   Make sure PocketBase is running at http://localhost:8090\n');
+        console.log(`   Make sure PocketBase is running at ${process.env.POCKETBASE_URL || 'http://localhost:8090'}\n`);
         process.exit(1);
     }
 
     // List all collections (requires admin auth)
     console.log('2. Attempting admin authentication...');
-    const adminEmails = ['admin@admin.com', 'admin@example.com'];
-    const adminPasswords = ['password', 'admin123', '123456'];
-
     let authenticated = false;
-    for (const email of adminEmails) {
-        for (const pass of adminPasswords) {
-            try {
-                await pb.collection('_superusers').authWithPassword(email, pass);
-                console.log(`   ✅ Authenticated as admin: ${email}\n`);
-                authenticated = true;
-                break;
-            } catch (err) {
-                // Try next combination
-            }
+
+    if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+        try {
+            await pb.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+            console.log(`   ✅ Authenticated as admin: ${ADMIN_EMAIL}\n`);
+            authenticated = true;
+        } catch (err) {
+            console.log('   ⚠️  Authentication failed with provided credentials');
         }
-        if (authenticated) break;
+    } else {
+        console.log('   ⚠️  PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD environment variables not set');
     }
 
     if (!authenticated) {
-        console.log('   ⚠️  Could not authenticate as admin (tried common credentials)');
         console.log('   Continuing with limited access...\n');
     }
 

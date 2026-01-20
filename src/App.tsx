@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import pb from './lib/pocketbase';
 import { Dashboard } from './components/Dashboard';
 import { ExportData } from './components/ExportData';
@@ -37,13 +37,21 @@ function AppContent() {
     const [newCustomerId, setNewCustomerId] = useState('');
     const [isAddingCustomer, setIsAddingCustomer] = useState(false);
 
+    // Use refs to avoid recreating handleAddCustomer when input values change
+    const newCustomerNameRef = useRef(newCustomerName);
+    const newCustomerIdRef = useRef(newCustomerId);
+    newCustomerNameRef.current = newCustomerName;
+    newCustomerIdRef.current = newCustomerId;
+
     const handleStylesLoaded = useCallback((styles: StyleRecord[]) => {
         setCurrentStyles(styles);
     }, []);
 
     const handleAddCustomer = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newCustomerName.trim() || !newCustomerId.trim()) {
+        const name = newCustomerNameRef.current.trim();
+        const id = newCustomerIdRef.current.trim();
+        if (!name || !id) {
             toast.error('Error', 'Please fill in all fields');
             return;
         }
@@ -51,21 +59,21 @@ function AppContent() {
         setIsAddingCustomer(true);
         try {
             const newCustomer = await pb.collection('customers').create<Customer>({
-                name: newCustomerName.trim(),
-                customer_id: newCustomerId.trim(),
+                name: name,
+                customer_id: id,
             });
             setCustomers(prev => [...prev, newCustomer].sort((a, b) => a.name.localeCompare(b.name)));
             setShowAddCustomerModal(false);
             setNewCustomerName('');
             setNewCustomerId('');
-            toast.success('Success', `Customer "${newCustomerName}" created successfully`);
+            toast.success('Success', `Customer "${name}" created successfully`);
         } catch (err) {
             console.error('Error creating customer:', err);
             toast.error('Error', 'Failed to create customer');
         } finally {
             setIsAddingCustomer(false);
         }
-    }, [newCustomerName, newCustomerId, toast]);
+    }, [toast]);
 
     const handleClearAllStyles = useCallback(async () => {
         if (!selectedCustomerId) return;
@@ -148,6 +156,15 @@ function AppContent() {
                                 className="dashboard-card"
                                 style={{ cursor: 'pointer', textAlign: 'center', padding: '1.5rem' }}
                                 onClick={() => setSelectedCustomerId(customer.id)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setSelectedCustomerId(customer.id);
+                                    }
+                                }}
+                                aria-label={`Select customer ${customer.name}`}
                             >
                                 {customer.logo && <img src={pb.files.getUrl(customer, customer.logo)} alt={customer.name} style={{ maxWidth: '100px', marginBottom: '1rem' }} />}
                                 <h3>{customer.name}</h3>
@@ -158,8 +175,17 @@ function AppContent() {
                             className="dashboard-card add-customer-card"
                             style={{ cursor: 'pointer', textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '150px' }}
                             onClick={() => setShowAddCustomerModal(true)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setShowAddCustomerModal(true);
+                                }
+                            }}
+                            aria-label="Add new customer"
                         >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '48px', height: '48px', color: '#94a3b8', marginBottom: '1rem' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '48px', height: '48px', color: '#94a3b8', marginBottom: '1rem' }} aria-hidden="true">
                                 <line x1="12" y1="5" x2="12" y2="19" />
                                 <line x1="5" y1="12" x2="19" y2="12" />
                             </svg>

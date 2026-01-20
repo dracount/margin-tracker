@@ -1,3 +1,22 @@
+// ============================================================================
+// Validation Constants
+// ============================================================================
+
+const VALIDATION_CONSTANTS = {
+  MIN_RATE: 1,
+  MAX_RATE: 200,
+  MIN_PRICE: 0,
+  MIN_UNITS: 1,
+  MAX_UNITS: 1000000,
+  MIN_PACK: 1,
+  MAX_PACK: 10000,
+  MAX_BACKOFF_MS: 30000,
+};
+
+// ============================================================================
+// Types
+// ============================================================================
+
 export interface ValidationError {
     field: string;
     message: string;
@@ -17,69 +36,114 @@ export interface StyleValidationData {
     sellingPrice?: number | string;
 }
 
+// ============================================================================
+// Validation Helper Functions
+// ============================================================================
+
 /**
- * Validates a single field value
+ * Validates that a value is a positive number within an optional range
+ * @param value - The value to validate
+ * @param fieldName - The name of the field for error messages
+ * @param options - Validation options including min, max, required, and integer constraints
+ * @returns An error message string if validation fails, null if valid
+ */
+function validatePositiveNumber(
+  value: unknown,
+  fieldName: string,
+  options: {
+    min?: number;
+    max?: number;
+    required?: boolean;
+    integer?: boolean;
+  } = {}
+): string | null {
+  const { min = 0, max = Infinity, required = true, integer = false } = options;
+
+  // Check empty
+  if (value === undefined || value === '' || value === null) {
+    if (!required) return null; // Optional field
+    return `${fieldName} is required`;
+  }
+
+  // Check numeric
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+  if (isNaN(num)) {
+    return `${fieldName} must be a valid number`;
+  }
+
+  // Check integer if required
+  if (integer && !Number.isInteger(num)) {
+    return `${fieldName} must be a positive integer`;
+  }
+
+  // Check positive (greater than min which defaults to 0)
+  if (num < min) {
+    if (min === 0) {
+      return `${fieldName} must be 0 or greater`;
+    }
+    return `${fieldName} must be at least ${min}`;
+  }
+
+  // Check max
+  if (num > max) {
+    return `${fieldName} must be between ${min} and ${max}`;
+  }
+
+  return null;
+}
+
+// ============================================================================
+// Field Validation
+// ============================================================================
+
+/**
+ * Validates a single field value for style data
+ * @param field - The field name to validate
+ * @param value - The value to validate
+ * @returns An error message string if validation fails, null if valid
  */
 export function validateField(field: keyof StyleValidationData, value: number | string | undefined): string | null {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-
     switch (field) {
         case 'units':
-            if (value === undefined || value === '' || value === null) {
-                return 'Units is required';
-            }
-            if (isNaN(numValue as number) || !Number.isInteger(numValue) || (numValue as number) < 1) {
-                return 'Units must be a positive integer';
-            }
-            return null;
+            return validatePositiveNumber(value, 'Units', {
+                min: VALIDATION_CONSTANTS.MIN_UNITS,
+                max: VALIDATION_CONSTANTS.MAX_UNITS,
+                required: true,
+                integer: true
+            });
 
         case 'pack':
-            if (value === undefined || value === '' || value === null) {
-                return 'Pack is required';
-            }
-            if (isNaN(numValue as number) || !Number.isInteger(numValue) || (numValue as number) < 1) {
-                return 'Pack must be a positive integer (min 1)';
-            }
-            return null;
+            return validatePositiveNumber(value, 'Pack', {
+                min: VALIDATION_CONSTANTS.MIN_PACK,
+                max: VALIDATION_CONSTANTS.MAX_PACK,
+                required: true,
+                integer: true
+            });
 
         case 'price':
-            if (value === undefined || value === '' || value === null) {
-                return 'Price is required';
-            }
-            if (isNaN(numValue as number) || (numValue as number) <= 0) {
-                return 'Price must be a positive number';
-            }
-            return null;
+            return validatePositiveNumber(value, 'Price', {
+                min: VALIDATION_CONSTANTS.MIN_PRICE,
+                required: true
+            }) || (Number(value) <= 0 ? 'Price must be a positive number' : null);
 
         case 'rate':
-            if (value === undefined || value === '' || value === null) {
-                return 'Rate is required';
-            }
-            if (isNaN(numValue as number) || (numValue as number) <= 0) {
-                return 'Rate must be a positive number';
-            }
-            if ((numValue as number) < 1 || (numValue as number) > 200) {
-                return 'Rate must be between 1 and 200';
-            }
-            return null;
+            return validatePositiveNumber(value, 'Rate', {
+                min: VALIDATION_CONSTANTS.MIN_RATE,
+                max: VALIDATION_CONSTANTS.MAX_RATE,
+                required: true
+            });
 
         case 'extraCost':
-            if (value === undefined || value === '' || value === null) {
-                return null; // Extra cost can be empty (defaults to 0)
-            }
-            if (isNaN(numValue as number) || (numValue as number) < 0) {
-                return 'Extra cost must be 0 or greater';
-            }
-            return null;
+            return validatePositiveNumber(value, 'Extra cost', {
+                min: 0,
+                required: false
+            });
 
         case 'sellingPrice':
-            if (value === undefined || value === '' || value === null) {
-                return 'Selling price is required';
-            }
-            if (isNaN(numValue as number) || (numValue as number) <= 0) {
-                return 'Selling price must be a positive number';
-            }
-            return null;
+            return validatePositiveNumber(value, 'Selling price', {
+                min: VALIDATION_CONSTANTS.MIN_PRICE,
+                required: true
+            }) || (Number(value) <= 0 ? 'Selling price must be a positive number' : null);
 
         default:
             return null;
@@ -88,6 +152,8 @@ export function validateField(field: keyof StyleValidationData, value: number | 
 
 /**
  * Validates all style fields at once
+ * @param data - The style data object to validate
+ * @returns A ValidationResult object with isValid flag and errors record
  */
 export function validateStyleData(data: StyleValidationData): ValidationResult {
     const errors: Record<string, string> = {};
@@ -106,8 +172,14 @@ export function validateStyleData(data: StyleValidationData): ValidationResult {
     };
 }
 
+// ============================================================================
+// API Error Handling
+// ============================================================================
+
 /**
- * Returns a user-friendly error message for API errors
+ * Maps API errors to user-friendly messages
+ * @param error - The error object from API call
+ * @returns A user-friendly error message string
  */
 export function getApiErrorMessage(error: unknown): string {
     if (error instanceof Error) {
@@ -135,14 +207,27 @@ export function getApiErrorMessage(error: unknown): string {
         if (message.includes('500') || message.includes('internal server')) {
             return 'A server error occurred. Please try again later.';
         }
+        if (message.includes('429') || message.includes('rate limit')) {
+            return 'Too many requests. Please wait a moment and try again.';
+        }
     }
 
     // Default message for unknown errors
     return 'An unexpected error occurred. Please try again.';
 }
 
+// ============================================================================
+// Retry Logic
+// ============================================================================
+
 /**
- * Retry logic wrapper for async operations
+ * Wraps an async operation with retry logic and exponential backoff
+ * @param operation - The async operation to execute
+ * @param maxRetries - Maximum number of retry attempts (must be at least 1)
+ * @param delayMs - Base delay in milliseconds between retries
+ * @param onRetry - Optional callback called before each retry attempt
+ * @returns The result of the operation
+ * @throws The last error if all retries are exhausted, or immediately for non-retryable errors
  */
 export async function withRetry<T>(
     operation: () => Promise<T>,
@@ -150,6 +235,11 @@ export async function withRetry<T>(
     delayMs: number = 1000,
     onRetry?: (attempt: number, error: unknown) => void
 ): Promise<T> {
+    // Validate maxRetries parameter
+    if (maxRetries < 1) {
+        throw new Error('maxRetries must be at least 1');
+    }
+
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -158,8 +248,23 @@ export async function withRetry<T>(
         } catch (error) {
             lastError = error;
 
-            // Don't retry on client errors (4xx) - check status code for PocketBase errors
             const err = error as { status?: number; message?: string };
+
+            // Special handling for 429 (rate limited) - should retry with longer delay
+            if (err.status === 429) {
+                if (attempt < maxRetries) {
+                    if (onRetry) {
+                        onRetry(attempt, error);
+                    }
+                    // Double the delay for rate limits
+                    const retryDelay = delayMs * attempt * 2;
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    continue;
+                }
+                throw error;
+            }
+
+            // Don't retry on client errors (4xx except 429) - check status code for PocketBase errors
             if (err.status && err.status >= 400 && err.status < 500) {
                 throw error;
             }
@@ -182,8 +287,12 @@ export async function withRetry<T>(
                 if (onRetry) {
                     onRetry(attempt, error);
                 }
-                // Exponential backoff
-                await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
+                // True exponential backoff with cap
+                const backoffDelay = Math.min(
+                    delayMs * Math.pow(2, attempt - 1),
+                    VALIDATION_CONSTANTS.MAX_BACKOFF_MS
+                );
+                await new Promise(resolve => setTimeout(resolve, backoffDelay));
             }
         }
     }
