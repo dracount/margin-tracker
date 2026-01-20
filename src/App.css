@@ -277,6 +277,18 @@ body.light-mode input:focus {
     background: rgba(0, 0, 0, 0.05);
 }
 
+/* Hide number input spinners - values must be typed */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .glass-header {
     margin-bottom: 2rem;
     display: flex;
