@@ -921,7 +921,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
     const handleUpdate = useCallback(async (id: string, data: Partial<StyleRecord>): Promise<boolean> => {
         try {
             await withRetry(
-                () => pb.collection('styles').update(id, data),
+                () => pb.collection('styles').update(id, data, { requestKey: null }),
                 3,
                 1000,
                 (attempt) => {
@@ -940,7 +940,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
     const handleDelete = useCallback(async (id: string): Promise<void> => {
         try {
             await withRetry(
-                () => pb.collection('styles').delete(id),
+                () => pb.collection('styles').delete(id, { requestKey: null }),
                 3,
                 1000,
                 (attempt) => {
@@ -1136,7 +1136,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ customerId, onStylesLoaded
 
         for (const id of idsToDelete) {
             try {
-                await pb.collection('styles').delete(id);
+                await pb.collection('styles').delete(id, { requestKey: null });
                 successCount++;
             } catch (err) {
                 console.error('Error deleting record:', err);
