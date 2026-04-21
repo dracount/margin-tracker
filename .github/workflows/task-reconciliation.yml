@@ -1,0 +1,32 @@
+name: task-reconciliation
+
+# Nightly drift check for the GitHub-Issues task-tracking system (backstops
+# the fail-open commit-msg validator). See scripts/reconcile-task-cache.sh.
+
+on:
+  schedule:
+    # 03:17 UTC daily (05:17 SAST). Off-the-hour minute reduces GHA scheduler contention.
+    - cron: '17 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need git log for last 30 days
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run reconciliation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/reconcile-task-cache.sh scripts/refresh-task-cache.sh
+          ./scripts/reconcile-task-cache.sh

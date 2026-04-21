@@ -1,0 +1,15 @@
+{
+  "graphql": {
+    "addSubIssueMutation": "addSubIssue",
+    "subIssuesQueryField": "subIssues",
+    "parentIssueQueryField": "parent"
+  },
+  "schema": {
+    "statusLabels": ["status:in-progress", "status:blocked", "status:reopened"],
+    "sizeLabels": ["size:small", "size:large"],
+    "typeLabels": ["type:bug", "type:chore", "type:feature"],
+    "auditLabels": ["source:migration"]
+  },
+  "validated_at": "2026-04-20",
+  "validated_gh_version": "gh version 2.85.0 (2026-01-14)"
+}

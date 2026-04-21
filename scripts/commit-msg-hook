@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# .git/hooks/commit-msg
+# Validates issue refs in the commit message before the commit is accepted.
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+validator="$repo_root/scripts/validate-commit-trailer.sh"
+
+if [[ ! -x "$validator" ]]; then
+  echo "commit-msg hook: validator script not found at $validator — skipping" >&2
+  exit 0
+fi
+
+exec "$validator" "$1"
