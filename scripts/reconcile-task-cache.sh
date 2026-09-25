@@ -139,7 +139,10 @@ for i in cache["issues"]:
 else:
     print("UNKNOWN")
 ')
-  if [[ "$state" == "UNKNOWN" ]]; then
+  # A cache miss is NOT proof the issue never existed: the cache only holds
+  # OPEN issues plus those updated in the last 90 days, so any closed issue
+  # eventually ages out. Confirm against live GitHub before flagging.
+  if [[ "$state" == "UNKNOWN" ]] && ! gh issue view "$n" --json number >/dev/null 2>&1; then
     echo "[ORPHAN NARRATIVE] $f references issue #$n which does not exist" >&2
     errors=$((errors + 1))
   fi
